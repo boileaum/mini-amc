@@ -1,0 +1,7 @@
+data/
+scans/
+__pycache__/
+*.pyc
+.venv/
+template/copy.json
+template/qr.png

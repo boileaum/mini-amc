@@ -1,0 +1,24 @@
+{
+  "copy_id": "0001",
+  "meta": { "title": "Examen de démonstration", "course": "Démo 101", "date": "2026-11-12" },
+  "questions": [
+    {
+      "id": "q2",
+      "text": "Combien font 7 × 8 ?",
+      "choices": [
+        { "key": "A", "text": "54", "correct": false },
+        { "key": "B", "text": "56", "correct": true },
+        { "key": "C", "text": "63", "correct": false }
+      ]
+    },
+    {
+      "id": "q1",
+      "text": "Quelle est la capitale de la France ?",
+      "choices": [
+        { "key": "A", "text": "Lyon", "correct": false },
+        { "key": "B", "text": "Paris", "correct": true },
+        { "key": "C", "text": "Marseille", "correct": false }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+[package]
+name = "mini-amc-template"
+version = "0.1.0"
+entrypoint = "main.typ"
+compiler = "0.15.1"
