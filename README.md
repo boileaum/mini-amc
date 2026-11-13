@@ -1,7 +1,7 @@
 # mini-amc
 
 [![CI](https://github.com/boileaum/mini-amc/actions/workflows/ci.yml/badge.svg)](https://github.com/boileaum/mini-amc/actions/workflows/ci.yml)
-[![pages](https://github.com/boileaum/mini-amc/actions/workflows/pages.yml/badge.svg)](https://github.com/boileaum/mini-amc/actions/workflows/pages.yml)
+[![docs](https://img.shields.io/badge/docs-online-3776AB?logo=readthedocs&logoColor=white)](https://boileaum.github.io/mini-amc/)
 [![coverage](https://raw.githubusercontent.com/boileaum/mini-amc/main/assets/coverage.svg)](https://boileaum.github.io/mini-amc/coverage/)
 [![Python](https://img.shields.io/badge/python-%3E%3D3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/boileaum/mini-amc/blob/main/LICENSE)
