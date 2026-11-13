@@ -55,7 +55,7 @@ dev = [
     { include-group = "test" },
     { include-group = "doc" },
 ]
-test = ["pytest", "pytest-cov", "genbadge", "defusedxml"]
+test = ["pytest", "pytest-cov", "genbadge", "defusedxml", "httpx2"]
 lint = ["ruff", "ty", "pre-commit", "pydoclint"]
 doc = ["Sphinx>=7.2.2", "myst-parser", "furo", "sphinx-copybutton", "sphinxcontrib-programoutput"]
 

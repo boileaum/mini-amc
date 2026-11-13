@@ -48,5 +48,12 @@ mini-amc-omr --scans scans --positions data/positions.json --out data/omr_result
 uv run uvicorn mini_amc.web.app:app --reload     # -> http://127.0.0.1:8000/copies
 ```
 
+Review UI (JSON API, interactive docs at `/docs`):
+
+- `GET /copies` — all copies with their status (`ok` / `needs_review` / `partial` / `unread`), pages read vs expected, questions read vs total, manual corrections count
+- `GET /copy/{copy_id}` — detail: per question the OMR-checked keys, ink fills, `needs_review` flag, expected key, ongoing correction, plus the current score
+- `GET /copy/{copy_id}/scan/{page}` — annotated scan image of that page
+- `POST /copy/{copy_id}/correction` — body `{"qid": "q1", "checked": ["B"]}` (empty list clears); saved to `data/corrections.json`, score recomputed
+
 See `SCOPE.md` for the scope and technical decisions, and `runbook.md` for the full
 exam-day procedure (generation → printing → scan → OMR → review → grades).
