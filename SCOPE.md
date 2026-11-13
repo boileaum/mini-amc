@@ -42,8 +42,9 @@ Hors scope v1 :
 | --- | --- | --- |
 | `bank.example.yml` | Banque de questions (exemple) | saisie manuelle |
 | `data/copy_XXXX.json` | Une copie : questions/choix mélangés, clés A/B/C… | `gen/generate.py` |
-| `data/copy_XXXX.pdf` | La copie imprimable (template Typst + `copy.json` + `qr.png`) | `gen/generate.py` via `typst compile` |
-| `data/positions.json` | Positions des bulles sur la page, extraites via `typst query` sur `#metadata(...)` | `gen/generate.py` |
+| `data/copy_XXXX.pdf` | La copie imprimable (template Typst + `copy.json` + `qr-{page}.png`) | `gen/generate.py` via `typst compile` |
+| `data/build/XXXX/` | Répertoire de build Typst d'une copie (`main.typ` + `copy.json` + `qr-N.png`) | `gen/generate.py` |
+| `data/positions.json` | Positions des bulles par copie (indexé par `copy_id`), extraites via `typst eval` sur `#metadata(...)` | `gen/generate.py` |
 | `data/answers.json` | Réponses correctes par copie (clé de correction) | `gen/generate.py` |
 | `data/omr_results.json` | Résultats OMR par scan : copy_id, page, cases lues, flag `a_verifier` | `omr/read_scans.py` |
 | `data/notes.csv` | Note finale par copie | étape barème (D8) |

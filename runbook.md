@@ -10,8 +10,8 @@
 
 ## Génération des copies
 
-- [ ] `python3 gen/generate.py --bank <banque.yml> --copies N --seed S --out data`
-- [ ] vérifier la présence de `data/copy_XXXX.pdf`, `data/positions.json`, `data/answers.json`
+- [ ] `mini-amc-gen --bank <banque.yml> --copies N --seed S --out data` (ou `uv run python -m mini_amc.gen.generate …`)
+- [ ] vérifier la présence de `data/copy_XXXX.pdf`, `data/copy_XXXX.json`, `data/positions.json`, `data/answers.json`
 - [ ] chaque page des PDF porte 4 carrés noirs aux coins + 1 QR code en haut à droite (`copy:XXXX|page:N`)
 
 ## Impression
@@ -31,12 +31,12 @@
 
 ## OMR
 
-- [ ] `python3 omr/read_scans.py --scans scans --positions data/positions.json --out data/omr_results.json`
+- [ ] `mini-amc-omr --scans scans --positions data/positions.json --out data/omr_results.json`
 - [ ] parcourir `data/omr_results.json` : toute copie avec le statut `a_verifier` ou `non lu` passe en relecture manuelle
 
 ## Relecture (UI web)
 
-- [ ] `uvicorn web.app:app --reload` → http://127.0.0.1:8000/copies
+- [ ] `uv run uvicorn mini_amc.web.app:app --reload` → http://127.0.0.1:8000/copies
 - [ ] traiter une par une les copies `a_verifier` / `non lu` (scan annoté + cases détectées)
 - [ ] enregistrer les corrections manuelles ; la note est recalculée à chaque correction
 
