@@ -31,10 +31,10 @@ Hors scope v1 :
 - Sur CHAQUE page : 4 carrés noirs d'alignement aux coins + 1 QR code (contenu texte `copy:XXXX|page:N`) en haut à droite.
 - Typst CLI épinglé v0.15.1 (binaire officiel) ; `template/typst.toml` contient `compiler = "0.15.1"`.
 - Syntaxe Typst 0.15 : les alignements composés s'écrivent `top + left` (pas `top-left`).
-- Stack Python épinglée exactement (`requirements.txt`) : opencv-python-headless==5.0.0.93, numpy==2.5.4, pillow==13.0.0, qrcode==8.2, PyYAML==6.0.3, fastapi==0.162.5, uvicorn==0.54.0.
+- Stack Python épinglée exactement dans `pyproject.toml` (`==`) + `uv.lock` commité : opencv-python-headless==5.0.0.93, numpy==2.5.4, pillow==13.0.0, qrcode==8.2, PyYAML==6.0.3, fastapi==0.162.5, uvicorn==0.54.0.
 - Lecture du QR côté OMR avec `cv2.QRCodeDetector` (pas pyzbar, pas de dépendance système).
 - Données 100 % locales : les scans de copies (données d'étudiants) ne vont jamais dans le cloud.
-- Pas de commentaires dans les fichiers `.py` et `.typ`.
+- Commentaires minimaux dans les fichiers `.py` et `.typ` : uniquement quand le « pourquoi » du code n'est pas évident (décision non triviale, contournement). Le « quoi » va dans le code, les décisions de conception dans `SCOPE.md` / `README.md`.
 
 ## Formats de fichiers
 
