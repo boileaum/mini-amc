@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- pre-commit: new `sphinx-build` hook (`-W` warnings-as-errors, output `docs/build/`, triggered on `docs/` or `src/` changes); `docs/source/conf.py` no longer hacks `sys.path` (package installed by `uv sync`, build via `uv run`); skill template updated.
 - All-English project rule (code, docstrings, comments, docs, CLI messages, statuses, commit messages); statuses renamed to `needs_review` / `unread` / `partial`, CLI `--threshold` / `--gray-threshold`.
 - Docstrings required on the public Python API (Google convention; ruff `D` + `pydoclint` in lint); SCOPE.md and the `python-exemplaire` skill updated accordingly.
 - D5: robust QR + multi-page + thresholds — `read_qr`: `detectAndDecodeMulti`, binarized/upscaled variants, page rotation deduced from the geometric position of the QR (upside-down/sideways pages read correctly); `omr_results.json` restructured as `{"scans": …, "copies": …}` with multi-page aggregation per `copy_id` (statuses `ok` / `needs_review` / `partial` / `unread`); CLI thresholds `--threshold` (0.35) and `--gray-threshold` (0.15): a choice is checked if fill >= threshold, `needs_review` if several checked or a gray trace, no answer (nothing above the gray threshold) = 0 pt without flag.

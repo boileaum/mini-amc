@@ -33,6 +33,12 @@ repos:
         entry: uv run pydoclint src tests
         language: system
         pass_filenames: false
+      - id: sphinx-build
+        name: sphinx-build (docs, warnings as errors)
+        entry: uv run sphinx-build -W -b html docs/source docs/build
+        language: system
+        pass_filenames: false
+        files: ^(docs/|src/)
       - id: pytest
         name: pytest (unit tests)
         entry: uv run pytest -q
