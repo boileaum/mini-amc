@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- D6: torture tests + OMR hardening — 11 new tests in `tests/test_torture.py` (shared helpers moved to `tests/synth.py`): noise, under/over-exposure, blur, 0.5x/0.35x low-DPI, JPEG q70, sideways page, cut marker → `unread`, damaged QR → `unread`, mixed batch (`ok` / `needs_review` / `unread`). Fixes: `unwarp` rolls the destination quad when the detected marker quad is wider than tall (sideways pages no longer anisotropically stretched); `read_qr` tries all 4 rotations and keeps the one whose QR is geometrically top-right (an upside-down QR also decodes, so position disambiguates), with a regex-parse helper; `detect_markers` picks the candidate closest to each expected corner (guard 25% of the diagonal) instead of requiring exactly 4 components. Real validation: 40-question copy, 7 pages photographed with perspective jitter + blur + noise + JPEG q75 → copy `ok`, 40/40 answers matching `answers.json`, 0 `needs_review`.
 - Docs homepage `docs/source/index.md` now includes `README.md` (`eval-rst` + `.. include::` with `:parser: myst_parser.sphinx_`), build stays warning-free with `-W`.
 - CI split into one job per pre-commit hook (`pre-commit run <id> --all-files`, one step per id): hygiene, ruff, types (ty), docstrings (pydoclint), docs (sphinx-build), tests (pytest pre-push).
 - New `.github/workflows/pages.yml`: publish Sphinx docs to GitHub Pages on main pushes touching docs/src/README (enable Settings → Pages → Source = GitHub Actions).

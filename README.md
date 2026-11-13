@@ -1,6 +1,14 @@
 # mini-amc
 
+[![CI](https://github.com/boileaum/mini-amc/actions/workflows/ci.yml/badge.svg)](https://github.com/boileaum/mini-amc/actions/workflows/ci.yml)
+[![pages](https://github.com/boileaum/mini-amc/actions/workflows/pages.yml/badge.svg)](https://github.com/boileaum/mini-amc/actions/workflows/pages.yml)
+[![Python](https://img.shields.io/badge/python-%3E%3D3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/boileaum/mini-amc/blob/main/LICENSE)
+[![Built with Mistral Vibe](https://img.shields.io/badge/built_with-Mistral_Vibe-FF7000?logo=mistralai)](https://mistral.ai/vibe)
+
 A mini-clone of Auto-Multiple-Choice (AMC) based on Typst: YAML question bank → personalized PDF copies (seeded shuffle, check bubbles, per-page QR code) → scan → local OMR reading (OpenCV) → web review (FastAPI) → CSV grades. 100% local data, zero external Typst packages. Everything in English.
+
+Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every commit carries the `Co-Authored-By: Mistral Vibe` trailer).
 
 ## Installation
 

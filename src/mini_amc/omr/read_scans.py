@@ -53,12 +53,17 @@ def detect_markers(image: np.ndarray) -> np.ndarray:
         if fill < 0.7 or not (0.6 <= aspect <= 1.6):
             continue
         cands.append((float(centroids[i][0]), float(centroids[i][1])))
-    if len(cands) != 4:
+    if len(cands) < 4:
         raise ValueError(f"{len(cands)} markers found (4 required)")
-    cands.sort(key=lambda p: p[1])
-    top = sorted(cands[:2], key=lambda p: p[0])
-    bottom = sorted(cands[2:], key=lambda p: p[0])
-    return np.array([top[0], top[1], bottom[1], bottom[0]], dtype=np.float32)
+    h, w = gray.shape
+    max_d = 0.25 * max(h, w)
+    chosen = []
+    for cx, cy in ((0, 0), (w, 0), (w, h), (0, h)):
+        best = min(cands, key=lambda p: (p[0] - cx) ** 2 + (p[1] - cy) ** 2)
+        if best in chosen or ((best[0] - cx) ** 2 + (best[1] - cy) ** 2) ** 0.5 > max_d:
+            raise ValueError(f"no marker near corner ({cx}, {cy})")
+        chosen.append(best)
+    return np.array(chosen, dtype=np.float32)
 
 
 def _dst_points(scale: float) -> np.ndarray:
@@ -72,6 +77,11 @@ def unwarp(image: np.ndarray, markers: np.ndarray, scale: float = SCALE) -> np.n
     """
     Straighten the page by homography to an A4 at ``scale`` px/pt.
 
+    If the marker quadrilateral is wider than tall (page scanned
+    sideways), the destination corners are cyclically shifted so the
+    output stays a portrait A4 instead of being anisotropically
+    stretched; :func:`read_qr` then fixes any residual 180° flip.
+
     Args:
         image: Page scan.
         markers: Centers of the 4 squares (:func:`detect_markers` order).
@@ -80,7 +90,18 @@ def unwarp(image: np.ndarray, markers: np.ndarray, scale: float = SCALE) -> np.n
     Returns:
         Straightened A4 image (white border outside the scanned area).
     """
-    M = cv2.getPerspectiveTransform(markers, _dst_points(scale))
+    dst = _dst_points(scale)
+    quad_w = (
+        np.linalg.norm(markers[1] - markers[0])
+        + np.linalg.norm(markers[2] - markers[3])
+    ) / 2
+    quad_h = (
+        np.linalg.norm(markers[3] - markers[0])
+        + np.linalg.norm(markers[2] - markers[1])
+    ) / 2
+    if quad_w > quad_h:
+        dst = np.roll(dst, 1, axis=0)
+    M = cv2.getPerspectiveTransform(markers, dst)
     return cv2.warpPerspective(
         image,
         M,
@@ -89,55 +110,23 @@ def unwarp(image: np.ndarray, markers: np.ndarray, scale: float = SCALE) -> np.n
     )
 
 
-def _qr_rotation(warped, det) -> int:
-    ok, points = det.detect(warped)
-    if not ok or points is None or len(points) == 0:
-        return 0
-    c = points[0].mean(axis=0)
-    h, w = warped.shape[:2]
-    s = w / PAGE_W_PT
-    ex, ey = 405 * s, 65 * s
-    ang_m = float(np.degrees(np.arctan2(c[1] - h / 2, c[0] - w / 2)))
-    ang_e = float(np.degrees(np.arctan2(ey - h / 2, ex - w / 2)))
-    return int(round((ang_m - ang_e) / 90) % 4) * 90
-
-
-def read_qr(warped: np.ndarray) -> dict:
-    """
-    Read the QR code of a straightened page (content ``copy:XXXX|page:N``).
-
-    Tries several crops, binarized/upscaled variants and
-    ``detectAndDecodeMulti``. The page rotation is deduced from the
-    geometric position of the QR (QR codes decode upside down too).
-
-    Args:
-        warped: Page straightened by :func:`unwarp`.
-
-    Returns:
-        Dict with ``copy_id``, ``page`` and ``rot`` (rotation in degrees
-        to compensate to make the page upright).
-
-    Raises:
-        ValueError: If no readable QR code is found.
-    """
-    s = warped.shape[1] / PAGE_W_PT
-    h, w = warped.shape[:2]
+def _decode_crops(img: np.ndarray, det) -> str | None:
+    s = img.shape[1] / PAGE_W_PT
+    h, w = img.shape[:2]
     crops = [
-        warped[0 : int(130 * s), int(340 * s) : min(w, int(470 * s))],
-        warped[0 : int(160 * s), int(300 * s) : w],
-        warped[0 : int(200 * s), 0:w],
-        warped,
+        img[0 : int(130 * s), int(340 * s) : min(w, int(470 * s))],
+        img[0 : int(160 * s), int(300 * s) : w],
+        img[0 : int(200 * s), 0:w],
+        img,
     ]
-    det = cv2.QRCodeDetector()
-    rot = _qr_rotation(warped, det)
     for crop in crops:
-        for img in (
+        for variant0 in (
             crop,
             cv2.resize(crop, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),
         ):
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            gray = cv2.cvtColor(variant0, cv2.COLOR_BGR2GRAY)
             _, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            for variant in (img, bw):
+            for variant in (variant0, bw):
                 ok, decoded, _, _ = det.detectAndDecodeMulti(variant)
                 texts = list(decoded) if ok and decoded else []
                 if not texts:
@@ -145,13 +134,61 @@ def read_qr(warped: np.ndarray) -> dict:
                     if data:
                         texts = [data]
                 for t in texts:
-                    m = QR_RE.fullmatch(t or "")
-                    if m:
-                        return {
-                            "copy_id": m.group(1),
-                            "page": int(m.group(2)),
-                            "rot": rot,
-                        }
+                    if QR_RE.fullmatch(t or ""):
+                        return t
+    return None
+
+
+def read_qr(warped: np.ndarray) -> dict:
+    """
+    Read the QR code of a straightened page (content ``copy:XXXX|page:N``).
+
+    Tries the 4 page orientations and keeps the one where the QR is
+    detected at the top right (the expected position): the page may be
+    scanned sideways or upside down, and the QR detector of some OpenCV
+    builds does not localize 90°-rotated codes.
+
+    Args:
+        warped: Page straightened by :func:`unwarp` (any orientation).
+
+    Returns:
+        Dict with ``copy_id``, ``page`` and ``rot`` (rotation in degrees
+        such that ``np.rot90(warped, -rot // 90)`` makes the page upright).
+
+    Raises:
+        ValueError: If no readable QR code is found.
+    """
+    det = cv2.QRCodeDetector()
+
+    def parse(text: str, k: int) -> dict | None:
+        m = QR_RE.fullmatch(text)
+        if m is None:
+            return None
+        return {"copy_id": m.group(1), "page": int(m.group(2)), "rot": (-k * 90) % 360}
+
+    fallback = None
+    for k in range(4):
+        img = np.rot90(warped, k) if k else warped
+        h, w = img.shape[:2]
+        text = _decode_crops(img, det)
+        if not text:
+            continue
+        parsed = parse(text, k)
+        if parsed is None:
+            continue
+        ok, points = det.detect(img)
+        c = (
+            points[0].mean(axis=0)
+            if ok and points is not None and len(points) > 0
+            else None
+        )
+        top_right = c is not None and c[0] > 0.55 * w and c[1] < 0.3 * h
+        if top_right:
+            return parsed
+        if fallback is None:
+            fallback = parsed
+    if fallback is not None:
+        return fallback
     raise ValueError("QR code unreadable")
 
 
