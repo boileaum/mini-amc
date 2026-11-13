@@ -46,7 +46,8 @@ Hors scope v1 :
 | `data/build/XXXX/` | Répertoire de build Typst d'une copie (`main.typ` + `copy.json` + `qr-N.png`) | `gen/generate.py` |
 | `data/positions.json` | Positions des bulles par copie (indexé par `copy_id`), extraites via `typst eval` sur `#metadata(...)` | `gen/generate.py` |
 | `data/answers.json` | Réponses correctes par copie (clé de correction) | `gen/generate.py` |
-| `data/omr_results.json` | Résultats OMR par scan : copy_id, page, cases lues, flag `a_verifier` | `omr/read_scans.py` |
+| `data/omr_results.json` | Résultats OMR par scan : statut (`ok` / `a_verifier` / `non_lu`), copy_id, page, cases cochées par question + densité de remplissage | `omr/read_scans.py` |
+| `data/annotated/` | Scans redressés et annotés (marqueurs, QR, bulles détectées) | `omr/read_scans.py` |
 | `data/notes.csv` | Note finale par copie | étape barème (D8) |
 | `data/notes_detail.csv` | Détail question par question (bonne réponse cochée, attendue, point) | étape barème (D8) |
 

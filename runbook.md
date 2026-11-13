@@ -32,7 +32,8 @@
 ## OMR
 
 - [ ] `mini-amc-omr --scans scans --positions data/positions.json --out data/omr_results.json`
-- [ ] parcourir `data/omr_results.json` : toute copie avec le statut `a_verifier` ou `non lu` passe en relecture manuelle
+- [ ] parcourir `data/omr_results.json` : toute copie avec le statut `a_verifier` ou `non_lu` passe en relecture manuelle
+- [ ] les scans redressés et annotés (marqueurs, QR, bulles) sont dans `data/annotated/` pour contrôle visuel
 
 ## Relecture (UI web)
 

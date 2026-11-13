@@ -10,9 +10,9 @@
   margin: (top: 4.5cm, right: 2.5cm, bottom: 2.5cm, left: 2.5cm),
   background: [
     #place(top + left, dx: corner, dy: corner, square(size: marker, fill: black))
-    #place(top + right, dx: -(corner + marker), dy: corner, square(size: marker, fill: black))
-    #place(bottom + left, dx: corner, dy: -(corner + marker), square(size: marker, fill: black))
-    #place(bottom + right, dx: -(corner + marker), dy: -(corner + marker), square(size: marker, fill: black))
+    #place(top + right, dx: -corner, dy: corner, square(size: marker, fill: black))
+    #place(bottom + left, dx: corner, dy: -corner, square(size: marker, fill: black))
+    #place(bottom + right, dx: -corner, dy: -corner, square(size: marker, fill: black))
     #place(
       top + right,
       dx: -(corner + qr-size + marker + 0.3cm),
