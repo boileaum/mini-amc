@@ -18,7 +18,8 @@ BUBBLE_R_PT = 4.5
 BUBBLE_DX_PT = BUBBLE_R_PT
 BUBBLE_DY_PT = 3.0
 FILL_R_PT = 2.5
-FILL_THRESHOLD = 0.35
+SEUIL = 0.35
+SEUIL_GRIS = 0.15
 QR_RE = re.compile(r"copy:(\d+)\|page:(\d+)")
 
 
@@ -62,33 +63,62 @@ def unwarp(image, markers, scale: float = SCALE):
     )
 
 
+def _qr_rotation(warped, det) -> int:
+    ok, points = det.detect(warped)
+    if not ok or points is None or len(points) == 0:
+        return 0
+    c = points[0].mean(axis=0)
+    h, w = warped.shape[:2]
+    s = w / PAGE_W_PT
+    ex, ey = 405 * s, 65 * s
+    ang_m = float(np.degrees(np.arctan2(c[1] - h / 2, c[0] - w / 2)))
+    ang_e = float(np.degrees(np.arctan2(ey - h / 2, ex - w / 2)))
+    return int(round((ang_m - ang_e) / 90) % 4) * 90
+
+
 def read_qr(warped) -> dict:
     s = warped.shape[1] / PAGE_W_PT
-    h = warped.shape[0]
+    h, w = warped.shape[:2]
     crops = [
-        (350, 470, 0, 130),
-        (300, 595, 0, 160),
-        (0, 595, 0, 200),
-        (0, PAGE_W_PT, 0, PAGE_H_PT),
+        warped[0 : int(130 * s), int(340 * s) : min(w, int(470 * s))],
+        warped[0 : int(160 * s), int(300 * s) : w],
+        warped[0 : int(200 * s), 0:w],
+        warped,
     ]
     det = cv2.QRCodeDetector()
-    for x0, x1, y0, y1 in crops:
-        crop = warped[
-            max(0, int(y0 * s)) : min(h, int(y1 * s)),
-            max(0, int(x0 * s)) : min(warped.shape[1], int(x1 * s)),
-        ]
+    rot = _qr_rotation(warped, det)
+    for crop in crops:
         for img in (
             crop,
             cv2.resize(crop, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),
         ):
-            data, _, _ = det.detectAndDecode(img)
-            m = QR_RE.fullmatch(data or "")
-            if m:
-                return {"copy_id": m.group(1), "page": int(m.group(2))}
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            _, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            for variant in (img, bw):
+                ok, decoded, _, _ = det.detectAndDecodeMulti(variant)
+                texts = list(decoded) if ok and decoded else []
+                if not texts:
+                    data, _, _ = det.detectAndDecode(variant)
+                    if data:
+                        texts = [data]
+                for t in texts:
+                    m = QR_RE.fullmatch(t or "")
+                    if m:
+                        return {
+                            "copy_id": m.group(1),
+                            "page": int(m.group(2)),
+                            "rot": rot,
+                        }
     raise ValueError("QR illisible")
 
 
-def read_bubbles(warped, copy_positions: dict, page: int) -> list[dict]:
+def read_bubbles(
+    warped,
+    copy_positions: dict,
+    page: int,
+    seuil: float = SEUIL,
+    seuil_gris: float = SEUIL_GRIS,
+) -> list[dict]:
     gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
     _, bw = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY_INV)
     h, w = gray.shape
@@ -111,13 +141,14 @@ def read_bubbles(warped, copy_positions: dict, page: int) -> list[dict]:
             b["qid"], {"qid": b["qid"], "fills": {}, "checked": []}
         )
         q["fills"][b["key"]] = round(fill, 3)
-        if fill > FILL_THRESHOLD:
-            q["checked"].append(b["key"])
     result = []
     for qid in sorted(questions):
         q = questions[qid]
-        q["a_verifier"] = len(q["checked"]) != 1
         q["fills"] = dict(sorted(q["fills"].items()))
+        checked = [k for k, f in q["fills"].items() if f >= seuil]
+        gris = [k for k, f in q["fills"].items() if seuil_gris <= f < seuil]
+        q["checked"] = checked
+        q["a_verifier"] = len(checked) > 1 or len(gris) > 0
         result.append(q)
     return result
 
@@ -154,7 +185,11 @@ def _draw_annotations(
 
 
 def process_scan(
-    path: Path, positions: dict, annotated_dir: Path | None = None
+    path: Path,
+    positions: dict,
+    annotated_dir: Path | None = None,
+    seuil: float = SEUIL,
+    seuil_gris: float = SEUIL_GRIS,
 ) -> dict:
     result = {
         "scan": path.name,
@@ -172,12 +207,16 @@ def process_scan(
         markers = detect_markers(image)
         warped = unwarp(image, markers)
         qr = read_qr(warped)
+        if qr["rot"]:
+            warped = np.rot90(warped, -qr["rot"] // 90).copy()
         result["copy_id"] = qr["copy_id"]
         result["page"] = qr["page"]
         if qr["copy_id"] not in positions:
             raise ValueError(f"copy_id {qr['copy_id']} inconnu de positions.json")
         copy_pos = positions[qr["copy_id"]]
-        result["questions"] = read_bubbles(warped, copy_pos, qr["page"])
+        result["questions"] = read_bubbles(
+            warped, copy_pos, qr["page"], seuil, seuil_gris
+        )
         result["status"] = (
             "ok"
             if all(not q["a_verifier"] for q in result["questions"])
@@ -196,12 +235,44 @@ def process_scan(
     return result
 
 
+def aggregate_copies(results: dict, positions: dict) -> dict:
+    by_copy: dict[str, dict] = {}
+    for r in results.values():
+        if r["status"] == "non_lu" or r["copy_id"] is None:
+            continue
+        cid = r["copy_id"]
+        c = by_copy.setdefault(cid, {"pages": [], "questions": []})
+        if r["page"] not in c["pages"]:
+            c["pages"].append(r["page"])
+            c["questions"].extend(dict(q, page=r["page"]) for q in r["questions"])
+    copies = {}
+    for cid, c in by_copy.items():
+        if cid not in positions:
+            status = "non_lu"
+        else:
+            expected = {b["page"] for b in positions[cid]["bubbles"]}
+            pages = sorted(set(c["pages"]))
+            if pages and set(pages) != expected:
+                status = "partiel"
+            elif any(q["a_verifier"] for q in c["questions"]):
+                status = "a_verifier"
+            else:
+                status = "ok"
+        c["status"] = status
+        c["pages"] = sorted(set(c["pages"]))
+        c["questions"].sort(key=lambda q: (q["page"], q["qid"]))
+        copies[cid] = c
+    return copies
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Lecture OMR des scans de copies")
     ap.add_argument("--scans", type=Path, default=Path("scans"))
     ap.add_argument("--positions", type=Path, default=Path("data/positions.json"))
     ap.add_argument("--out", type=Path, default=Path("data/omr_results.json"))
     ap.add_argument("--annotated", type=Path, default=Path("data/annotated"))
+    ap.add_argument("--seuil", type=float, default=SEUIL)
+    ap.add_argument("--seuil-gris", type=float, default=SEUIL_GRIS)
     args = ap.parse_args()
 
     positions = json.loads(args.positions.read_text(encoding="utf-8"))
@@ -212,10 +283,13 @@ def main() -> None:
     )
     results = {}
     for scan in scans:
-        results[scan.name] = process_scan(scan, positions, args.annotated)
+        results[scan.name] = process_scan(
+            scan, positions, args.annotated, args.seuil, args.seuil_gris
+        )
+    output = {"scans": results, "copies": aggregate_copies(results, positions)}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
-        json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8"
+        json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
 

@@ -128,7 +128,7 @@ def test_read_qr():
     img, _ = _make_page("0007", 3, {})
     markers = detect_markers(img)
     warped = unwarp(img, markers)
-    assert read_qr(warped) == {"copy_id": "0007", "page": 3}
+    assert read_qr(warped) == {"copy_id": "0007", "page": 3, "rot": 0}
 
 
 def test_read_bubbles_filled_empty_ambiguous():
@@ -142,7 +142,17 @@ def test_read_bubbles_filled_empty_ambiguous():
 
     img2, positions2 = _make_page("0001", 1, {})
     q2 = read_bubbles(unwarp(img2, detect_markers(img2)), positions2["0001"], 1)
-    assert all(q["a_verifier"] and q["checked"] == [] for q in q2)
+    assert all(q["checked"] == [] and not q["a_verifier"] for q in q2)
+
+    img_gris, positions_gris = _make_page("0001", 1, {})
+    b = _bubble_pos("q1", "A", 0, 1)
+    cx = int((b["x_pt"] + BUBBLE_DX_PT) * SCALE)
+    cy = int((b["y_pt"] + BUBBLE_DY_PT) * SCALE)
+    cv2.circle(img_gris, (cx, cy), int(1.2 * SCALE), (0, 0, 0), -1)
+    qg = read_bubbles(
+        unwarp(img_gris, detect_markers(img_gris)), positions_gris["0001"], 1
+    )
+    assert qg[0]["checked"] == [] and qg[0]["a_verifier"]
 
     img3, positions3 = _make_page("0001", 1, {"q1": "A"})
     _draw_bubble(img3, _bubble_pos("q1", "C", 2, 1), filled=True)
@@ -200,7 +210,76 @@ def test_main_end_to_end(tmp_path, monkeypatch):
     )
     main()
     results = json.loads((tmp_path / "omr_results.json").read_text())
-    assert results["scan_0001_p1.png"]["status"] == "ok"
-    assert results["scan_0001_p1.png"]["copy_id"] == "0001"
-    assert results["blank.png"]["status"] == "non_lu"
+    assert results["scans"]["scan_0001_p1.png"]["status"] == "ok"
+    assert results["scans"]["scan_0001_p1.png"]["copy_id"] == "0001"
+    assert results["scans"]["blank.png"]["status"] == "non_lu"
+    assert results["copies"]["0001"]["status"] == "ok"
+    assert results["copies"]["0001"]["pages"] == [1]
+    assert len(results["copies"]["0001"]["questions"]) == 2
     assert (tmp_path / "annotated" / "scan_0001_p1.png").exists()
+
+
+def test_process_scan_page_retournee(tmp_path):
+    img, positions = _make_page("0009", 1, {"q1": "B", "q2": "C"})
+    img = np.rot90(img, 2).copy()
+    scan = _warp_photo(img, tmp_path / "scan_0009_p1.png", seed=8)
+    result = process_scan(scan, positions)
+    assert result["status"] == "ok", result["error"]
+    assert result["copy_id"] == "0009" and result["page"] == 1
+    assert {q["qid"]: q["checked"] for q in result["questions"]} == {
+        "q1": ["B"],
+        "q2": ["C"],
+    }
+
+
+def test_main_multipages_et_partiel(tmp_path, monkeypatch):
+    from mini_amc.omr.read_scans import main
+
+    scans = tmp_path / "scans"
+    scans.mkdir()
+    img1, pos1 = _make_page("0005", 1, {"q1": "A", "q2": "B"})
+    img2, pos2 = _make_page("0005", 2, {"q1": "C", "q2": "A"})
+    positions = {
+        "0005": {
+            "copy_id": "0005",
+            "page": pos1["0005"]["page"],
+            "questions": [],
+            "bubbles": pos1["0005"]["bubbles"] + pos2["0005"]["bubbles"],
+        }
+    }
+    _warp_photo(img1, scans / "scan_0005_p1.png", seed=21)
+    _warp_photo(img2, scans / "scan_0005_p2.png", seed=22)
+    (tmp_path / "positions.json").write_text(json.dumps(positions), encoding="utf-8")
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "mini-amc-omr",
+            "--scans",
+            str(scans),
+            "--positions",
+            str(tmp_path / "positions.json"),
+            "--out",
+            str(tmp_path / "omr_results.json"),
+            "--annotated",
+            str(tmp_path / "annotated"),
+        ],
+    )
+    main()
+    results = json.loads((tmp_path / "omr_results.json").read_text())
+    copy = results["copies"]["0005"]
+    assert copy["status"] == "ok"
+    assert copy["pages"] == [1, 2]
+    assert len(copy["questions"]) == 4
+    assert {q["qid"] + f"@p{q['page']}" for q in copy["questions"]} == {
+        "q1@p1",
+        "q2@p1",
+        "q1@p2",
+        "q2@p2",
+    }
+    by_key = {f"{q['qid']}@p{q['page']}": q["checked"] for q in copy["questions"]}
+    assert by_key["q1@p1"] == ["A"] and by_key["q2@p2"] == ["A"]
+
+    (scans / "scan_0005_p2.png").unlink()
+    main()
+    results = json.loads((tmp_path / "omr_results.json").read_text())
+    assert results["copies"]["0005"]["status"] == "partiel"

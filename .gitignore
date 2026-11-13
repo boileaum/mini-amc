@@ -14,3 +14,4 @@ dist/
 docs/build/
 docs/source/_build/
 docs/source/_autosummary/
+/public/
