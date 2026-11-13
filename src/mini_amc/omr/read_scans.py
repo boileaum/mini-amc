@@ -168,8 +168,8 @@ def read_bubbles(
     For each bubble, measures the ink density of the inner disk
     (center = metadata + calibrated offset). A choice is checked if
     its fill >= ``threshold``; ``needs_review`` if several choices are
-    checked or a gray trace exists (fill in [``gray_threshold``,
-    ``threshold``[).
+    checked or a gray trace exists (fill between ``gray_threshold`` and
+    ``threshold``).
 
     Args:
         warped: Straightened and reoriented page.

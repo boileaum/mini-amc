@@ -1,10 +1,5 @@
 """Sphinx configuration for the mini-amc docs."""
 
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath("../../src"))
-
 from mini_amc import __version__
 
 project = "mini-amc"
