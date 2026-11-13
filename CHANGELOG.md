@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Docs homepage `docs/source/index.md` now includes `README.md` (`eval-rst` + `.. include::` with `:parser: myst_parser.sphinx_`), build stays warning-free with `-W`.
+- CI split into one job per pre-commit hook (`pre-commit run <id> --all-files`, one step per id): hygiene, ruff, types (ty), docstrings (pydoclint), docs (sphinx-build), tests (pytest pre-push).
+- New `.github/workflows/pages.yml`: publish Sphinx docs to GitHub Pages on main pushes touching docs/src/README (enable Settings → Pages → Source = GitHub Actions).
 - pre-commit: new `sphinx-build` hook (`-W` warnings-as-errors, output `docs/build/`, triggered on `docs/` or `src/` changes); `docs/source/conf.py` no longer hacks `sys.path` (package installed by `uv sync`, build via `uv run`); skill template updated.
 - All-English project rule (code, docstrings, comments, docs, CLI messages, statuses, commit messages); statuses renamed to `needs_review` / `unread` / `partial`, CLI `--threshold` / `--gray-threshold`.
 - Docstrings required on the public Python API (Google convention; ruff `D` + `pydoclint` in lint); SCOPE.md and the `python-exemplaire` skill updated accordingly.
