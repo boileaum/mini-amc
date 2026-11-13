@@ -19,7 +19,7 @@ def test_modules_importables():
         assert importlib.import_module(name) is not None
 
 
-@pytest.mark.skipif(shutil.which("typst") is None, reason="binaire typst requis")
+@pytest.mark.skipif(shutil.which("typst") is None, reason="typst binary required")
 def test_compile_fixture(tmp_path):
     import subprocess
 

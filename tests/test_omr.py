@@ -113,7 +113,7 @@ def test_detect_markers_rejects_incomplete():
         (0, 0, 0),
         -1,
     )
-    with pytest.raises(ValueError, match="marqueurs"):
+    with pytest.raises(ValueError, match="markers"):
         detect_markers(img)
 
 
@@ -136,13 +136,13 @@ def test_read_bubbles_filled_empty_ambiguous():
     warped = unwarp(img, detect_markers(img))
     questions = read_bubbles(warped, positions["0001"], 1)
     assert {q["qid"]: q["checked"] for q in questions} == {"q1": ["B"], "q2": ["A"]}
-    assert all(not q["a_verifier"] for q in questions)
+    assert all(not q["needs_review"] for q in questions)
     assert questions[0]["fills"]["B"] > 0.8
     assert questions[0]["fills"]["A"] < 0.2
 
     img2, positions2 = _make_page("0001", 1, {})
     q2 = read_bubbles(unwarp(img2, detect_markers(img2)), positions2["0001"], 1)
-    assert all(q["checked"] == [] and not q["a_verifier"] for q in q2)
+    assert all(q["checked"] == [] and not q["needs_review"] for q in q2)
 
     img_gris, positions_gris = _make_page("0001", 1, {})
     b = _bubble_pos("q1", "A", 0, 1)
@@ -152,12 +152,12 @@ def test_read_bubbles_filled_empty_ambiguous():
     qg = read_bubbles(
         unwarp(img_gris, detect_markers(img_gris)), positions_gris["0001"], 1
     )
-    assert qg[0]["checked"] == [] and qg[0]["a_verifier"]
+    assert qg[0]["checked"] == [] and qg[0]["needs_review"]
 
     img3, positions3 = _make_page("0001", 1, {"q1": "A"})
     _draw_bubble(img3, _bubble_pos("q1", "C", 2, 1), filled=True)
     q3 = read_bubbles(unwarp(img3, detect_markers(img3)), positions3["0001"], 1)
-    assert q3[0]["a_verifier"] and set(q3[0]["checked"]) == {"A", "C"}
+    assert q3[0]["needs_review"] and set(q3[0]["checked"]) == {"A", "C"}
 
 
 def test_process_scan_warped_photo(tmp_path):
@@ -174,11 +174,11 @@ def test_process_scan_warped_photo(tmp_path):
     assert result["annotated"] and Path(result["annotated"]).exists()
 
 
-def test_process_scan_non_lu(tmp_path):
+def test_process_scan_unread(tmp_path):
     img = np.full((H, W, 3), 255, dtype=np.uint8)
     cv2.imwrite(str(tmp_path / "blank.png"), img)
     result = process_scan(tmp_path / "blank.png", {})
-    assert result["status"] == "non_lu"
+    assert result["status"] == "unread"
     assert result["error"]
 
 
@@ -212,14 +212,14 @@ def test_main_end_to_end(tmp_path, monkeypatch):
     results = json.loads((tmp_path / "omr_results.json").read_text())
     assert results["scans"]["scan_0001_p1.png"]["status"] == "ok"
     assert results["scans"]["scan_0001_p1.png"]["copy_id"] == "0001"
-    assert results["scans"]["blank.png"]["status"] == "non_lu"
+    assert results["scans"]["blank.png"]["status"] == "unread"
     assert results["copies"]["0001"]["status"] == "ok"
     assert results["copies"]["0001"]["pages"] == [1]
     assert len(results["copies"]["0001"]["questions"]) == 2
     assert (tmp_path / "annotated" / "scan_0001_p1.png").exists()
 
 
-def test_process_scan_page_retournee(tmp_path):
+def test_process_scan_rotated_page(tmp_path):
     img, positions = _make_page("0009", 1, {"q1": "B", "q2": "C"})
     img = np.rot90(img, 2).copy()
     scan = _warp_photo(img, tmp_path / "scan_0009_p1.png", seed=8)
@@ -232,7 +232,7 @@ def test_process_scan_page_retournee(tmp_path):
     }
 
 
-def test_main_multipages_et_partiel(tmp_path, monkeypatch):
+def test_main_multipage_and_partial(tmp_path, monkeypatch):
     from mini_amc.omr.read_scans import main
 
     scans = tmp_path / "scans"
@@ -282,4 +282,4 @@ def test_main_multipages_et_partiel(tmp_path, monkeypatch):
     (scans / "scan_0005_p2.png").unlink()
     main()
     results = json.loads((tmp_path / "omr_results.json").read_text())
-    assert results["copies"]["0005"]["status"] == "partiel"
+    assert results["copies"]["0005"]["status"] == "partial"

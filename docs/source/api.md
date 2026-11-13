@@ -1,20 +1,20 @@
 # API
 
-## Génération des copies
+## Copy generation
 
 ```{eval-rst}
 .. automodule:: mini_amc.gen.generate
    :members:
 ```
 
-## Lecture OMR
+## OMR reading
 
 ```{eval-rst}
 .. automodule:: mini_amc.omr.read_scans
    :members:
 ```
 
-## UI web de relecture
+## Review web UI
 
 ```{eval-rst}
 .. automodule:: mini_amc.web.app

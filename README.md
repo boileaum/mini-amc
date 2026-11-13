@@ -1,21 +1,19 @@
 # mini-amc
 
-Mini-clone d'Auto-Multiple-Choice (AMC) basé sur Typst : banque de questions YAML → copies PDF
-personnalisées (mélange seedé, bulles à cocher, QR code par page) → scan → lecture OMR locale
-(OpenCV) → relecture web (FastAPI) → notes CSV. Données 100 % locales, zéro package Typst externe.
+A mini-clone of Auto-Multiple-Choice (AMC) based on Typst: YAML question bank → personalized PDF copies (seeded shuffle, check bubbles, per-page QR code) → scan → local OMR reading (OpenCV) → web review (FastAPI) → CSV grades. 100% local data, zero external Typst packages. Everything in English.
 
 ## Installation
 
-### 1. Environnement uv (Python >= 3.12, lockfile `uv.lock`)
+### 1. uv environment (Python >= 3.12, committed `uv.lock`)
 
 ```bash
-uv sync --all-groups    # crée .venv, installe le projet + les deps épinglées + les groupes dev
+uv sync --all-groups    # creates .venv, installs the project + pinned deps + dev groups
 ```
 
-Stack épinglée dans `pyproject.toml` (`==`) et figée par `uv.lock` : opencv-python-headless 5.0.0.93,
+Pinned stack in `pyproject.toml` (`==`) and frozen by `uv.lock`: opencv-python-headless 5.0.0.93,
 numpy 2.5.4, pillow 13.0.0, qrcode 8.2, PyYAML 6.0.3, fastapi 0.162.5, uvicorn 0.54.0.
 
-### 2. Typst CLI v0.15.1 (binaire officiel, épinglé)
+### 2. Typst CLI v0.15.1 (official binary, pinned)
 
 ```bash
 curl -L https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-unknown-linux-musl.tar.xz -o /tmp/typst.tar.xz
@@ -24,22 +22,22 @@ sudo mv /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
 typst --version                   # -> typst 0.15.1
 ```
 
-Sur macOS : remplacer l'archive par `typst-aarch64-apple-darwin.tar.xz` (Apple Silicon) ou
-`typst-x86_64-apple-darwin.tar.xz` (Intel), ou `brew install typst` puis vérifier `typst --version`.
+On macOS: replace the archive with `typst-aarch64-apple-darwin.tar.xz` (Apple Silicon) or
+`typst-x86_64-apple-darwin.tar.xz` (Intel), or `brew install typst` then check `typst --version`.
 
-## Quickstart (3 commandes)
+## Quickstart (3 commands)
 
 ```bash
-# 1. Générer les copies : data/copy_XXXX.pdf + data/positions.json + data/answers.json
+# 1. Generate the copies: data/copy_XXXX.pdf + data/positions.json + data/answers.json
 mini-amc-gen --bank bank.example.yml --copies 30 --seed 42 --out data
-# (équivalent : uv run python -m mini_amc.gen.generate --bank bank.example.yml ...)
+# (equivalent: uv run python -m mini_amc.gen.generate --bank bank.example.yml ...)
 
-# 2. Lecture OMR des scans placés dans scans/
+# 2. OMR reading of the scans placed in scans/
 mini-amc-omr --scans scans --positions data/positions.json --out data/omr_results.json
 
-# 3. UI de relecture des copies à vérifier
+# 3. Review UI for the copies to check
 uv run uvicorn mini_amc.web.app:app --reload     # -> http://127.0.0.1:8000/copies
 ```
 
-Voir `SCOPE.md` pour le périmètre et les décisions techniques, et `runbook.md` pour la
-procédure complète du jour J (génération → impression → scan → OMR → relecture → notes).
+See `SCOPE.md` for the scope and technical decisions, and `runbook.md` for the full
+exam-day procedure (generation → printing → scan → OMR → review → grades).

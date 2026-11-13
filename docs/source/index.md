@@ -1,6 +1,6 @@
 # mini-amc
 
-Mini-clone d'Auto-Multiple-Choice basé sur Typst : banque YAML → copies PDF personnalisées → scan → OMR → relecture web → notes CSV. Données 100 % locales.
+A mini-clone of Auto-Multiple-Choice based on Typst: YAML question bank → personalized PDF copies → scan → OMR → web review → CSV grades. 100% local data.
 
 ```{toctree}
 :maxdepth: 2

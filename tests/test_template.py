@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 pytestmark = pytest.mark.skipif(
-    shutil.which("typst") is None, reason="binaire typst requis"
+    shutil.which("typst") is None, reason="typst binary required"
 )
 
 MAX_PAGES = 64
@@ -18,11 +18,11 @@ def _build_copy(dir_path: Path) -> None:
     questions = [
         {
             "id": f"q{i}",
-            "text": f"Question numero {i} ?",
+            "text": f"Question number {i}?",
             "choices": [
-                {"key": "A", "text": f"choix A {i}", "correct": False},
-                {"key": "B", "text": f"choix B {i}", "correct": True},
-                {"key": "C", "text": f"choix C {i}", "correct": False},
+                {"key": "A", "text": f"choice A {i}", "correct": False},
+                {"key": "B", "text": f"choice B {i}", "correct": True},
+                {"key": "C", "text": f"choice C {i}", "correct": False},
             ],
         }
         for i in range(1, N_QUESTIONS + 1)
@@ -50,7 +50,7 @@ def _query_metadata(dir_path: Path) -> list:
     return json.loads(out)
 
 
-def test_multipage_et_positions(tmp_path):
+def test_multipage_and_positions(tmp_path):
     _build_copy(tmp_path)
     subprocess.run(
         ["typst", "compile", "main.typ", "copy.pdf"], cwd=tmp_path, check=True

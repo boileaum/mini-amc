@@ -1,3 +1,5 @@
+"""Sphinx configuration for the mini-amc docs."""
+
 import os
 import sys
 

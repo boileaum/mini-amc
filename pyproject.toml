@@ -7,7 +7,7 @@ name = "mini-amc"
 authors = [
     { name = "Matthieu Boileau", email = "matthieu.boileau@math.unistra.fr" },
 ]
-description = "Mini-clone d'Auto-Multiple-Choice base sur Typst : generation de copies QCM, lecture OMR, UI de relecture"
+description = "Mini-clone of Auto-Multiple-Choice based on Typst: QCM copy generation, OMR reading, review web UI"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -56,7 +56,7 @@ dev = [
     { include-group = "doc" },
 ]
 test = ["pytest", "pytest-cov"]
-lint = ["ruff", "ty", "pre-commit"]
+lint = ["ruff", "ty", "pre-commit", "pydoclint"]
 doc = ["Sphinx>=7.2.2", "myst-parser", "furo", "sphinx-copybutton", "sphinxcontrib-programoutput"]
 
 [tool.ruff]
@@ -64,10 +64,20 @@ line-length = 88
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B"]
+select = ["E", "F", "W", "I", "UP", "B", "D"]
+extend-select = ["D213"]
+ignore = ["D107", "D212"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]
+
+[tool.pydoclint]
+style = "google"
+arg-type-hints-in-docstring = false
+check-return-types = false
 
 [tool.ruff.format]
 quote-style = "double"

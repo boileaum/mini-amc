@@ -1,55 +1,55 @@
-# Runbook — jour J (passation d'un examen)
+# Runbook — exam day
 
-## Prérequis
+## Prerequisites
 
-- [ ] environnement à jour : `uv sync --all-groups` (lockfile `uv.lock` commité)
+- [ ] up-to-date environment: `uv sync --all-groups` (committed `uv.lock`)
 - [ ] `typst --version` → `typst 0.15.1`
-- [ ] banque de questions finalisée (ex. `bank.example.yml`) : exactement 1 choix `correct: true` par question, au moins 2 choix
-- [ ] `scans/` vide, prêt à recevoir les scans
-- [ ] `data/` de l'examen précédent archivé (si on réutilise le dossier)
+- [ ] finalized question bank (e.g. `bank.example.yml`): exactly 1 `correct: true` choice per question, at least 2 choices
+- [ ] `scans/` empty, ready to receive the scans
+- [ ] `data/` from the previous exam archived (if reusing the folder)
 
-## Génération des copies
+## Copy generation
 
-- [ ] `mini-amc-gen --bank <banque.yml> --copies N --seed S --out data` (ou `uv run python -m mini_amc.gen.generate …`)
-- [ ] vérifier la présence de `data/copy_XXXX.pdf`, `data/copy_XXXX.json`, `data/positions.json`, `data/answers.json`
-- [ ] chaque page des PDF porte 4 carrés noirs aux coins + 1 QR code en haut à droite (`copy:XXXX|page:N`)
+- [ ] `mini-amc-gen --bank <bank.yml> --copies N --seed S --out data` (or `uv run python -m mini_amc.gen.generate …`)
+- [ ] check the presence of `data/copy_XXXX.pdf`, `data/copy_XXXX.json`, `data/positions.json`, `data/answers.json`
+- [ ] every PDF page carries 4 black corner squares + 1 QR code at the top right (`copy:XXXX|page:N`)
 
-## Impression
+## Printing
 
-- [ ] imprimer les N copies (recto, une copie = 1 ou plusieurs pages selon le nombre de questions)
-- [ ] vérifier sur une copie test : coins noirs bien imprimés, QR net, bulles non masquées
+- [ ] print the N copies (single-sided; one copy = 1 or more pages depending on the number of questions)
+- [ ] check on a test copy: corner squares well printed, QR sharp, bubbles not masked
 
-## Passation
+## Exam
 
-- [ ] consigne : cocher UNE seule case par question
-- [ ] ramassage des copies
+- [ ] instructions: check ONE single box per question
+- [ ] collect the sheets
 
-## Scan
+## Scanning
 
-- [ ] scanner chaque copie dans `scans/` (PNG ou JPG, 150–300 dpi, page de préférence droite)
-- [ ] vérifier que les 4 coins noirs et le QR sont visibles sur chaque scan
+- [ ] scan each sheet into `scans/` (PNG or JPG, 150–300 dpi, page preferably upright)
+- [ ] check that the 4 black corners and the QR are visible on every scan
 
 ## OMR
 
 - [ ] `mini-amc-omr --scans scans --positions data/positions.json --out data/omr_results.json`
-- [ ] parcourir `data/omr_results.json` (section `copies`) : toute copie avec le statut `a_verifier`, `partiel` (page manquante) ou `non_lu` passe en relecture manuelle
-- [ ] les scans redressés et annotés (marqueurs, QR, bulles) sont dans `data/annotated/` pour contrôle visuel
+- [ ] review `data/omr_results.json` (section `copies`): any copy with status `needs_review`, `partial` (missing page) or `unread` goes to manual review
+- [ ] the straightened and annotated scans (markers, QR, bubbles) are in `data/annotated/` for visual checking
 
-## Relecture (UI web)
+## Review (web UI)
 
 - [ ] `uv run uvicorn mini_amc.web.app:app --reload` → http://127.0.0.1:8000/copies
-- [ ] traiter une par une les copies `a_verifier` / `non lu` (scan annoté + cases détectées)
-- [ ] enregistrer les corrections manuelles ; la note est recalculée à chaque correction
+- [ ] go through the `needs_review` / `partial` / `unread` copies one by one (annotated scan + detected choices)
+- [ ] save the manual corrections; the score is recomputed on each correction
 
-## Notes
+## Grades
 
-- [ ] exporter `data/notes.csv` (note par copie) et `data/notes_detail.csv` (détail par question)
-- [ ] archivage local : `data/` et `scans/` restent sur la machine, jamais dans le cloud
+- [ ] export `data/notes.csv` (grade per copy) and `data/notes_detail.csv` (question-by-question detail)
+- [ ] local archiving: `data/` and `scans/` stay on the machine, never in the cloud
 
-## Si une étape plante
+## If a step fails
 
-- [ ] génération : lire le message d'erreur (banque invalide ? `typst` introuvable ? seed ?). Aucun PDF n'est écrasé tant que la génération n'a pas abouti ; `answers.json` fait foi pour la correction
-- [ ] impression : si les coins ou le QR sont coupés, réduire la marge d'impression de l'imprimante (pas de « ajustage » qui déforme la géométrie)
-- [ ] OMR : un scan illisible → statut `non lu`, à reprendre en relecture manuelle dans l'UI ; ne pas relancer aveuglément
-- [ ] UI : si `data/omr_results.json` est absent, relancer d'abord l'étape OMR
-- [ ] dernier recours : repartir d'un `data/` propre, puis relancer la génération avec le même seed (reproductible)
+- [ ] generation: read the error message (invalid bank? `typst` not found? seed?). No PDF is overwritten until generation succeeds; `answers.json` is the answer key
+- [ ] printing: if corners or the QR are cut off, reduce the printer margin (no "fit to page" scaling, which distorts the geometry)
+- [ ] OMR: an unreadable scan → status `unread`, to be handled manually in the review UI; do not blindly re-run
+- [ ] UI: if `data/omr_results.json` is missing, re-run the OMR step first
+- [ ] last resort: start from a clean `data/`, then re-run generation with the same seed (reproducible)

@@ -16,7 +16,7 @@ BANK = Path("bank.example.yml")
 TEMPLATE = Path("template")
 
 
-def test_plan_copies_reproductible():
+def test_plan_copies_reproducible():
     bank = load_bank(BANK)
     a = plan_copies(bank, 3, 42)
     b = plan_copies(bank, 3, 42)
@@ -24,7 +24,7 @@ def test_plan_copies_reproductible():
     assert [c["copy_id"] for c in a] == ["0001", "0002", "0003"]
 
 
-def test_plan_copies_validite():
+def test_plan_copies_validity():
     bank = load_bank(BANK)
     copies = plan_copies(bank, 5, 7)
     qids = {q["id"] for q in bank["questions"]}
@@ -38,22 +38,22 @@ def test_plan_copies_validite():
             assert c["answers"][q["id"]] == corrects[0]["key"]
 
 
-def test_plan_copies_seed_change_ordre():
+def test_plan_copies_seed_changes_order():
     bank = load_bank(BANK)
     a = plan_copies(bank, 3, 42)
     b = plan_copies(bank, 3, 43)
     assert a != b
 
 
-def test_plan_copies_ne_mutile_pas_la_banque():
+def test_plan_copies_does_not_mutate_bank():
     bank = load_bank(BANK)
     snapshot = copy_mod.deepcopy(bank)
     plan_copies(bank, 3, 1)
     assert bank == snapshot
 
 
-@pytest.mark.skipif(shutil.which("typst") is None, reason="binaire typst requis")
-def test_compile_et_positions(tmp_path):
+@pytest.mark.skipif(shutil.which("typst") is None, reason="typst binary required")
+def test_compile_and_positions(tmp_path):
     bank = load_bank(BANK)
     copies = plan_copies(bank, 2, 42)
     for c in copies:
@@ -74,7 +74,7 @@ def test_compile_et_positions(tmp_path):
             assert 0 < b["y_pt"] < pos["page"]["h_pt"]
 
 
-@pytest.mark.skipif(shutil.which("typst") is None, reason="binaire typst requis")
+@pytest.mark.skipif(shutil.which("typst") is None, reason="typst binary required")
 def test_main_end_to_end(tmp_path, monkeypatch):
     from mini_amc.gen.generate import main
 

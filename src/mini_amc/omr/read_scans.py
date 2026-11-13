@@ -1,3 +1,5 @@
+"""Local OMR reading of scanned answer sheets: markers, homography, QR, bubbles."""
+
 import argparse
 import json
 import re
@@ -18,12 +20,25 @@ BUBBLE_R_PT = 4.5
 BUBBLE_DX_PT = BUBBLE_R_PT
 BUBBLE_DY_PT = 3.0
 FILL_R_PT = 2.5
-SEUIL = 0.35
-SEUIL_GRIS = 0.15
+THRESHOLD = 0.35
+GRAY_THRESHOLD = 0.15
 QR_RE = re.compile(r"copy:(\d+)\|page:(\d+)")
 
 
-def detect_markers(image) -> np.ndarray:
+def detect_markers(image: np.ndarray) -> np.ndarray:
+    """
+    Detect the 4 black alignment squares of a scanned page.
+
+    Args:
+        image: BGR image (any scan, perspective accepted).
+
+    Returns:
+        4x2 array of square centers, ordered top-left, top-right,
+        bottom-right, bottom-left.
+
+    Raises:
+        ValueError: If the number of square candidates is not 4.
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     n, _, stats, centroids = cv2.connectedComponentsWithStats(bw, connectivity=8)
@@ -39,7 +54,7 @@ def detect_markers(image) -> np.ndarray:
             continue
         cands.append((float(centroids[i][0]), float(centroids[i][1])))
     if len(cands) != 4:
-        raise ValueError(f"{len(cands)} marqueurs trouvés (4 requis)")
+        raise ValueError(f"{len(cands)} markers found (4 required)")
     cands.sort(key=lambda p: p[1])
     top = sorted(cands[:2], key=lambda p: p[0])
     bottom = sorted(cands[2:], key=lambda p: p[0])
@@ -53,7 +68,18 @@ def _dst_points(scale: float) -> np.ndarray:
     return np.array([[m, m], [w - m, m], [w - m, h - m], [m, h - m]], dtype=np.float32)
 
 
-def unwarp(image, markers, scale: float = SCALE):
+def unwarp(image: np.ndarray, markers: np.ndarray, scale: float = SCALE) -> np.ndarray:
+    """
+    Straighten the page by homography to an A4 at ``scale`` px/pt.
+
+    Args:
+        image: Page scan.
+        markers: Centers of the 4 squares (:func:`detect_markers` order).
+        scale: Output resolution in px/pt (2.0 ≈ 144 dpi).
+
+    Returns:
+        Straightened A4 image (white border outside the scanned area).
+    """
     M = cv2.getPerspectiveTransform(markers, _dst_points(scale))
     return cv2.warpPerspective(
         image,
@@ -76,7 +102,24 @@ def _qr_rotation(warped, det) -> int:
     return int(round((ang_m - ang_e) / 90) % 4) * 90
 
 
-def read_qr(warped) -> dict:
+def read_qr(warped: np.ndarray) -> dict:
+    """
+    Read the QR code of a straightened page (content ``copy:XXXX|page:N``).
+
+    Tries several crops, binarized/upscaled variants and
+    ``detectAndDecodeMulti``. The page rotation is deduced from the
+    geometric position of the QR (QR codes decode upside down too).
+
+    Args:
+        warped: Page straightened by :func:`unwarp`.
+
+    Returns:
+        Dict with ``copy_id``, ``page`` and ``rot`` (rotation in degrees
+        to compensate to make the page upright).
+
+    Raises:
+        ValueError: If no readable QR code is found.
+    """
     s = warped.shape[1] / PAGE_W_PT
     h, w = warped.shape[:2]
     crops = [
@@ -109,16 +152,36 @@ def read_qr(warped) -> dict:
                             "page": int(m.group(2)),
                             "rot": rot,
                         }
-    raise ValueError("QR illisible")
+    raise ValueError("QR code unreadable")
 
 
 def read_bubbles(
-    warped,
+    warped: np.ndarray,
     copy_positions: dict,
     page: int,
-    seuil: float = SEUIL,
-    seuil_gris: float = SEUIL_GRIS,
+    threshold: float = THRESHOLD,
+    gray_threshold: float = GRAY_THRESHOLD,
 ) -> list[dict]:
+    """
+    Read the checked bubbles of a straightened page.
+
+    For each bubble, measures the ink density of the inner disk
+    (center = metadata + calibrated offset). A choice is checked if
+    its fill >= ``threshold``; ``needs_review`` if several choices are
+    checked or a gray trace exists (fill in [``gray_threshold``,
+    ``threshold``[).
+
+    Args:
+        warped: Straightened and reoriented page.
+        copy_positions: ``positions.json`` entry of one copy.
+        page: Page number to read (bubbles of other pages are ignored).
+        threshold: Fill threshold for a checked bubble.
+        gray_threshold: Fill threshold for detecting a gray trace.
+
+    Returns:
+        List of questions (``qid``, ``fills`` per key, ``checked``,
+        ``needs_review``), sorted by ``qid``.
+    """
     gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
     _, bw = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY_INV)
     h, w = gray.shape
@@ -145,10 +208,12 @@ def read_bubbles(
     for qid in sorted(questions):
         q = questions[qid]
         q["fills"] = dict(sorted(q["fills"].items()))
-        checked = [k for k, f in q["fills"].items() if f >= seuil]
-        gris = [k for k, f in q["fills"].items() if seuil_gris <= f < seuil]
+        checked = [k for k, f in q["fills"].items() if f >= threshold]
+        gray_marks = [
+            k for k, f in q["fills"].items() if gray_threshold <= f < threshold
+        ]
         q["checked"] = checked
-        q["a_verifier"] = len(checked) > 1 or len(gris) > 0
+        q["needs_review"] = len(checked) > 1 or len(gray_marks) > 0
         result.append(q)
     return result
 
@@ -177,7 +242,7 @@ def _draw_annotations(
         q = qmap[b["qid"]]
         if b["key"] in q["checked"]:
             color = (0, 180, 0)
-        elif q["a_verifier"]:
+        elif q["needs_review"]:
             color = (0, 0, 255)
         else:
             color = (160, 160, 160)
@@ -188,12 +253,31 @@ def process_scan(
     path: Path,
     positions: dict,
     annotated_dir: Path | None = None,
-    seuil: float = SEUIL,
-    seuil_gris: float = SEUIL_GRIS,
+    threshold: float = THRESHOLD,
+    gray_threshold: float = GRAY_THRESHOLD,
 ) -> dict:
+    """
+    Process one full scan: markers, straightening, QR, bubbles, annotation.
+
+    Args:
+        path: Scan image file (PNG/JPG).
+        positions: ``positions.json`` content (indexed by copy_id).
+        annotated_dir: If set, output directory for the annotated image.
+        threshold: Fill threshold for a checked bubble.
+        gray_threshold: Fill threshold for detecting a gray trace.
+
+    Returns:
+        Dict with ``scan``, ``status`` (``ok`` / ``needs_review`` /
+        ``unread``), ``copy_id``, ``page``, ``questions``, ``annotated``
+        and ``error`` (set if ``unread``).
+
+    Raises:
+        ValueError: Raised internally then converted to status ``unread``
+            (unreadable image, missing markers, unreadable QR, unknown copy).
+    """
     result = {
         "scan": path.name,
-        "status": "non_lu",
+        "status": "unread",
         "copy_id": None,
         "page": None,
         "questions": [],
@@ -203,7 +287,7 @@ def process_scan(
     try:
         image = cv2.imread(str(path))
         if image is None:
-            raise ValueError("image illisible")
+            raise ValueError("unreadable image")
         markers = detect_markers(image)
         warped = unwarp(image, markers)
         qr = read_qr(warped)
@@ -212,15 +296,15 @@ def process_scan(
         result["copy_id"] = qr["copy_id"]
         result["page"] = qr["page"]
         if qr["copy_id"] not in positions:
-            raise ValueError(f"copy_id {qr['copy_id']} inconnu de positions.json")
+            raise ValueError(f"copy_id {qr['copy_id']} unknown in positions.json")
         copy_pos = positions[qr["copy_id"]]
         result["questions"] = read_bubbles(
-            warped, copy_pos, qr["page"], seuil, seuil_gris
+            warped, copy_pos, qr["page"], threshold, gray_threshold
         )
         result["status"] = (
             "ok"
-            if all(not q["a_verifier"] for q in result["questions"])
-            else "a_verifier"
+            if all(not q["needs_review"] for q in result["questions"])
+            else "needs_review"
         )
         if annotated_dir is not None:
             annotated_dir.mkdir(parents=True, exist_ok=True)
@@ -236,9 +320,21 @@ def process_scan(
 
 
 def aggregate_copies(results: dict, positions: dict) -> dict:
+    """
+    Aggregate results per copy (multi-page).
+
+    Args:
+        results: ``scans`` section of the OMR results (by scan name).
+        positions: ``positions.json`` content.
+
+    Returns:
+        Dict indexed by copy_id: ``status`` (``ok`` / ``needs_review`` /
+        ``partial`` if pages are missing / ``unread`` if unknown copy),
+        ``pages`` and ``questions`` (with their ``page``), sorted.
+    """
     by_copy: dict[str, dict] = {}
     for r in results.values():
-        if r["status"] == "non_lu" or r["copy_id"] is None:
+        if r["status"] == "unread" or r["copy_id"] is None:
             continue
         cid = r["copy_id"]
         c = by_copy.setdefault(cid, {"pages": [], "questions": []})
@@ -248,14 +344,14 @@ def aggregate_copies(results: dict, positions: dict) -> dict:
     copies = {}
     for cid, c in by_copy.items():
         if cid not in positions:
-            status = "non_lu"
+            status = "unread"
         else:
             expected = {b["page"] for b in positions[cid]["bubbles"]}
             pages = sorted(set(c["pages"]))
             if pages and set(pages) != expected:
-                status = "partiel"
-            elif any(q["a_verifier"] for q in c["questions"]):
-                status = "a_verifier"
+                status = "partial"
+            elif any(q["needs_review"] for q in c["questions"]):
+                status = "needs_review"
             else:
                 status = "ok"
         c["status"] = status
@@ -266,13 +362,20 @@ def aggregate_copies(results: dict, positions: dict) -> dict:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Lecture OMR des scans de copies")
+    """
+    CLI entry point ``mini-amc-omr``.
+
+    Reads the scans from ``--scans`` and writes ``--out`` as
+    ``{"scans": …, "copies": …}``, plus the annotated images in
+    ``--annotated``.
+    """
+    ap = argparse.ArgumentParser(description="OMR reading of scanned answer sheets")
     ap.add_argument("--scans", type=Path, default=Path("scans"))
     ap.add_argument("--positions", type=Path, default=Path("data/positions.json"))
     ap.add_argument("--out", type=Path, default=Path("data/omr_results.json"))
     ap.add_argument("--annotated", type=Path, default=Path("data/annotated"))
-    ap.add_argument("--seuil", type=float, default=SEUIL)
-    ap.add_argument("--seuil-gris", type=float, default=SEUIL_GRIS)
+    ap.add_argument("--threshold", type=float, default=THRESHOLD)
+    ap.add_argument("--gray-threshold", type=float, default=GRAY_THRESHOLD)
     args = ap.parse_args()
 
     positions = json.loads(args.positions.read_text(encoding="utf-8"))
@@ -284,7 +387,7 @@ def main() -> None:
     results = {}
     for scan in scans:
         results[scan.name] = process_scan(
-            scan, positions, args.annotated, args.seuil, args.seuil_gris
+            scan, positions, args.annotated, args.threshold, args.gray_threshold
         )
     output = {"scans": results, "copies": aggregate_copies(results, positions)}
     args.out.parent.mkdir(parents=True, exist_ok=True)

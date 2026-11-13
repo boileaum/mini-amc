@@ -30,7 +30,7 @@
   #linebreak()
   #text(12pt)[#copy.meta.course - #copy.meta.date]
   #linebreak()
-  #text(12pt)[Copie n° #copy.copy_id]
+  #text(12pt)[Copy no. #copy.copy_id]
 ]
 
 #v(1cm)
