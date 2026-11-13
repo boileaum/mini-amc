@@ -1,16 +1,29 @@
 #let copy = json("copy.json")
 
-#set page(width: 21cm, height: 29.7cm, margin: 2.5cm)
+#let marker = 1.2cm
+#let corner = 0.7cm
+#let qr-size = 3cm
+
+#set page(
+  width: 21cm,
+  height: 29.7cm,
+  margin: (top: 4.5cm, right: 2.5cm, bottom: 2.5cm, left: 2.5cm),
+  background: [
+    #place(top + left, dx: corner, dy: corner, square(size: marker, fill: black))
+    #place(top + right, dx: -(corner + marker), dy: corner, square(size: marker, fill: black))
+    #place(bottom + left, dx: corner, dy: -(corner + marker), square(size: marker, fill: black))
+    #place(bottom + right, dx: -(corner + marker), dy: -(corner + marker), square(size: marker, fill: black))
+    #place(
+      top + right,
+      dx: -(corner + qr-size + marker + 0.3cm),
+      dy: corner,
+      context image("qr-" + str(here().page()) + ".png", width: qr-size),
+    )
+  ],
+)
 #set text(size: 11pt)
 
-#let marker = 1.2cm
-
-#place(top + left, dx: -1.9cm, dy: -1.9cm, square(size: marker, fill: black))
-#place(top + right, dx: 1.9cm, dy: -1.9cm, square(size: marker, fill: black))
-#place(bottom + left, dx: -1.9cm, dy: 1.9cm, square(size: marker, fill: black))
-#place(bottom + right, dx: 1.9cm, dy: 1.9cm, square(size: marker, fill: black))
-
-#place(top + right, dx: -3.6cm, dy: -1.9cm, image("qr.png", width: 3cm))
+#v(0.8cm)
 
 #align(center)[
   #text(16pt, weight: "bold")[#copy.meta.title]
@@ -23,10 +36,12 @@
 #v(1cm)
 
 #for q in copy.questions [
-  #block[
+  #block(breakable: false)[
+    #context [#metadata((kind: "question", copy: copy.copy_id, qid: q.id, page: here().page(), x: here().position().x, y: here().position().y))]
     #text(weight: "bold")[#q.id - #q.text]
     #for c in q.choices [
       #block[
+        #context [#metadata((kind: "bubble", copy: copy.copy_id, qid: q.id, key: c.key, page: here().page(), x: here().position().x, y: here().position().y))]
         #box(circle(radius: 4.5pt, stroke: 1pt))
         #h(0.4em)
         #c.key - #c.text

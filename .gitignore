@@ -4,7 +4,7 @@ __pycache__/
 *.pyc
 .venv/
 template/copy.json
-template/qr.png
+template/qr-*.png
 .ruff_cache/
 .ty/
 .pytest_cache/
