@@ -23,6 +23,11 @@ Out of scope for v1:
 - Email sending.
 - Rich UI.
 
+Out of scope for v1 but **required for the rollout with real students** (post-v1 backlog, see NOTES.md):
+
+- Nominative link CSV (`copy_id` ↔ student name) for grading (local only, student data never leaves the machine).
+- Free-text fields with boxes blackened by the grader (graded open questions, score in [0, max] entered in the review UI).
+
 ## Technical decisions (acted)
 
 - Zero external Typst packages (no suiji, no tiaoma, nothing from the Universe):

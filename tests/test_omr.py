@@ -221,3 +221,44 @@ def test_main_multipage_and_partial(tmp_path, monkeypatch):
     main()
     results = json.loads((tmp_path / "omr_results.json").read_text())
     assert results["copies"]["0005"]["status"] == "partial"
+
+
+def test_main_missing_scans_dir(tmp_path, monkeypatch):
+    from mini_amc.omr.read_scans import main
+
+    (tmp_path / "positions.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "mini-amc-omr",
+            "--scans",
+            str(tmp_path / "nope"),
+            "--positions",
+            str(tmp_path / "positions.json"),
+            "--out",
+            str(tmp_path / "r.json"),
+        ],
+    )
+    with pytest.raises(SystemExit):
+        main()
+
+
+def test_main_missing_positions(tmp_path, monkeypatch):
+    from mini_amc.omr.read_scans import main
+
+    scans = tmp_path / "scans"
+    scans.mkdir()
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "mini-amc-omr",
+            "--scans",
+            str(scans),
+            "--positions",
+            str(tmp_path / "nope.json"),
+            "--out",
+            str(tmp_path / "r.json"),
+        ],
+    )
+    with pytest.raises(SystemExit):
+        main()

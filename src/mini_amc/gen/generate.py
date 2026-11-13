@@ -35,7 +35,16 @@ def load_bank(path: Path) -> dict:
     questions = data.get("questions", [])
     if not questions:
         raise ValueError("empty bank: no questions")
+    ids = [q.get("id") for q in questions]
+    if any(i is None for i in ids):
+        raise ValueError("every question needs an id")
+    if len(set(ids)) != len(ids):
+        raise ValueError(
+            f"duplicate question ids: {sorted({i for i in ids if ids.count(i) > 1})}"
+        )
     for q in questions:
+        if "text" not in q or "choices" not in q:
+            raise ValueError(f"question {q.get('id')}: 'text' and 'choices' required")
         correct = [c for c in q["choices"] if c.get("correct")]
         if len(correct) != 1:
             raise ValueError(
@@ -208,6 +217,9 @@ def main() -> None:
 
     Produces in ``--out``: ``copy_XXXX.json``, ``copy_XXXX.pdf``,
     ``positions.json`` (indexed by copy_id) and ``answers.json``.
+    Everything is staged in ``--out/.staging`` and moved into place
+    only when the whole generation succeeds: a failure leaves ``--out``
+    untouched.
     """
     ap = argparse.ArgumentParser(description="Generate QCM exam copies (Typst)")
     ap.add_argument("--bank", type=Path, default=Path("bank.example.yml"))
@@ -217,26 +229,43 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=Path("data"))
     args = ap.parse_args()
 
+    if args.copies < 1:
+        ap.error("--copies must be >= 1")
     bank = load_bank(args.bank)
     args.out.mkdir(parents=True, exist_ok=True)
 
-    copies = plan_copies(bank, args.copies, args.seed)
-    positions = {}
-    for copy in copies:
-        copy_id = copy["copy_id"]
-        copy_json = {k: v for k, v in copy.items() if k != "answers"}
-        (args.out / f"copy_{copy_id}.json").write_text(
-            json.dumps(copy_json, indent=2, ensure_ascii=False), encoding="utf-8"
+    stage = args.out / ".staging"
+    if stage.exists():
+        shutil.rmtree(stage)
+    stage.mkdir(parents=True)
+    try:
+        copies = plan_copies(bank, args.copies, args.seed)
+        positions = {}
+        for copy in copies:
+            copy_id = copy["copy_id"]
+            copy_json = {k: v for k, v in copy.items() if k != "answers"}
+            (stage / f"copy_{copy_id}.json").write_text(
+                json.dumps(copy_json, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+            build = compile_copy(
+                args.template, copy_json, stage / f"copy_{copy_id}.pdf"
+            )
+            positions[copy_id] = export_positions(build, copy_id)
+        (stage / "positions.json").write_text(
+            json.dumps(positions, indent=2, ensure_ascii=False), encoding="utf-8"
         )
-        build = compile_copy(args.template, copy_json, args.out / f"copy_{copy_id}.pdf")
-        positions[copy_id] = export_positions(build, copy_id)
-    (args.out / "positions.json").write_text(
-        json.dumps(positions, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-    answers = {c["copy_id"]: c["answers"] for c in copies}
-    (args.out / "answers.json").write_text(
-        json.dumps(answers, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+        answers = {c["copy_id"]: c["answers"] for c in copies}
+        (stage / "answers.json").write_text(
+            json.dumps(answers, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        if (args.out / "build").exists():
+            shutil.rmtree(args.out / "build")
+        for item in sorted(stage.iterdir()):
+            shutil.move(str(item), args.out / item.name)
+    except Exception:
+        shutil.rmtree(stage, ignore_errors=True)
+        raise
+    shutil.rmtree(stage, ignore_errors=True)
 
 
 if __name__ == "__main__":

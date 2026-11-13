@@ -415,6 +415,10 @@ def main() -> None:
     ap.add_argument("--gray-threshold", type=float, default=GRAY_THRESHOLD)
     args = ap.parse_args()
 
+    if not args.scans.is_dir():
+        ap.error(f"scans directory not found: {args.scans}")
+    if not args.positions.exists():
+        ap.error(f"positions file not found: {args.positions} (run mini-amc-gen first)")
     positions = json.loads(args.positions.read_text(encoding="utf-8"))
     scans = (
         sorted(args.scans.glob("*.png"))

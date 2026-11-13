@@ -7,6 +7,7 @@
 - [ ] finalized question bank (e.g. `bank.example.yml`): exactly 1 `correct: true` choice per question, at least 2 choices
 - [ ] `scans/` empty, ready to receive the scans
 - [ ] `data/` from the previous exam archived (if reusing the folder)
+- [ ] dev checks pass: `uv run pre-commit run --all-files` and `uv run pre-commit run pytest --all-files --hook-stage pre-push` (plus `coverage` / `coverage-badge`)
 
 ## Copy generation
 
@@ -53,4 +54,6 @@
 - [ ] printing: if corners or the QR are cut off, reduce the printer margin (no "fit to page" scaling, which distorts the geometry)
 - [ ] OMR: an unreadable scan → status `unread`, to be handled manually in the review UI; do not blindly re-run
 - [ ] UI: if `data/omr_results.json` is missing, re-run the OMR step first
+- [ ] grades: if `data/positions.json` / `answers.json` is missing, re-run generation with the same seed; an `unread` copy scores 0 until manually reviewed
+- [ ] generation: a failure leaves `data/` untouched (everything is staged in `data/.staging` then moved into place)
 - [ ] last resort: start from a clean `data/`, then re-run generation with the same seed (reproducible)
