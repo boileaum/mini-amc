@@ -6,16 +6,14 @@ personnalisées (mélange seedé, bulles à cocher, QR code par page) → scan �
 
 ## Installation
 
-### 1. Environnement Python (venv + stack épinglée)
+### 1. Environnement uv (Python >= 3.12, lockfile `uv.lock`)
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate        # Windows : .venv\Scripts\activate
-pip install -r requirements.txt
+uv sync --all-groups    # crée .venv, installe le projet + les deps épinglées + les groupes dev
 ```
 
-Stack épinglée : opencv-python-headless 5.0.0.93, numpy 2.5.4, pillow 13.0.0, qrcode 8.2,
-PyYAML 6.0.3, fastapi 0.162.5, uvicorn 0.54.0.
+Stack épinglée dans `pyproject.toml` (`==`) et figée par `uv.lock` : opencv-python-headless 5.0.0.93,
+numpy 2.5.4, pillow 13.0.0, qrcode 8.2, PyYAML 6.0.3, fastapi 0.162.5, uvicorn 0.54.0.
 
 ### 2. Typst CLI v0.15.1 (binaire officiel, épinglé)
 
@@ -33,13 +31,14 @@ Sur macOS : remplacer l'archive par `typst-aarch64-apple-darwin.tar.xz` (Apple S
 
 ```bash
 # 1. Générer les copies : data/copy_XXXX.pdf + data/positions.json + data/answers.json
-python3 gen/generate.py --bank bank.example.yml --copies 30 --seed 42 --out data
+mini-amc-gen --bank bank.example.yml --copies 30 --seed 42 --out data
+# (équivalent : uv run python -m mini_amc.gen.generate --bank bank.example.yml ...)
 
 # 2. Lecture OMR des scans placés dans scans/
-python3 omr/read_scans.py --scans scans --positions data/positions.json --out data/omr_results.json
+mini-amc-omr --scans scans --positions data/positions.json --out data/omr_results.json
 
 # 3. UI de relecture des copies à vérifier
-uvicorn web.app:app --reload     # -> http://127.0.0.1:8000/copies
+uv run uvicorn mini_amc.web.app:app --reload     # -> http://127.0.0.1:8000/copies
 ```
 
 Voir `SCOPE.md` pour le périmètre et les décisions techniques, et `runbook.md` pour la

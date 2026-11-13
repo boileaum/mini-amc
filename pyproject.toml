@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=61.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mini-amc"
+authors = [
+    { name = "Matthieu Boileau", email = "matthieu.boileau@math.unistra.fr" },
+]
+description = "Mini-clone d'Auto-Multiple-Choice base sur Typst : generation de copies QCM, lecture OMR, UI de relecture"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.12"
+dependencies = [
+    "opencv-python-headless==5.0.0.93",
+    "numpy==2.5.4",
+    "pillow==13.0.0",
+    "qrcode==8.2",
+    "PyYAML==6.0.3",
+    "fastapi==0.162.5",
+    "uvicorn==0.54.0",
+]
+dynamic = ["version"]
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+Repository = "https://github.com/boileaum/mini-amc.git"
+
+[project.scripts]
+mini-amc-gen = "mini_amc.gen.generate:main"
+mini-amc-omr = "mini_amc.omr.read_scans:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
+
+[tool.setuptools.dynamic.version]
+attr = "mini_amc.__version__"
+
+[dependency-groups]
+dev = [
+    { include-group = "lint" },
+    { include-group = "test" },
+    { include-group = "doc" },
+]
+test = ["pytest", "pytest-cov"]
+lint = ["ruff", "ty", "pre-commit"]
+doc = ["Sphinx>=7.2.2", "myst-parser", "furo", "sphinx-copybutton", "sphinxcontrib-programoutput"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ty.src]
+include = ["src", "tests"]
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.analysis]
+allowed-unresolved-imports = ["cv2", "cv2.*"]
+
+[tool.coverage.run]
+parallel = true
+source = ["src/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

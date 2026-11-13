@@ -5,3 +5,12 @@ __pycache__/
 .venv/
 template/copy.json
 template/qr.png
+.ruff_cache/
+.ty/
+.pytest_cache/
+.coverage*
+dist/
+*.egg-info/
+docs/build/
+docs/source/_build/
+docs/source/_autosummary/

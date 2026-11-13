@@ -2,7 +2,7 @@
 
 ## Prérequis
 
-- [ ] venv activé et dépendances à jour : `pip install -r requirements.txt`
+- [ ] environnement à jour : `uv sync --all-groups` (lockfile `uv.lock` commité)
 - [ ] `typst --version` → `typst 0.15.1`
 - [ ] banque de questions finalisée (ex. `bank.example.yml`) : exactement 1 choix `correct: true` par question, au moins 2 choix
 - [ ] `scans/` vide, prêt à recevoir les scans

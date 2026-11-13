@@ -13,7 +13,9 @@ def load_bank(path: Path) -> dict:
     for q in questions:
         correct = [c for c in q["choices"] if c.get("correct")]
         if len(correct) != 1:
-            raise ValueError(f"question {q.get('id')}: exactement 1 choix correct requis en v1")
+            raise ValueError(
+                f"question {q.get('id')}: exactement 1 choix correct requis en v1"
+            )
         if len(q["choices"]) < 2:
             raise ValueError(f"question {q.get('id')}: au moins 2 choix requis")
     return data
@@ -32,7 +34,9 @@ def export_positions(template_dir: Path, out_json: Path) -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Génère les copies d'un examen QCM (Typst)")
+    ap = argparse.ArgumentParser(
+        description="Génère les copies d'un examen QCM (Typst)"
+    )
     ap.add_argument("--bank", type=Path, default=Path("bank.example.yml"))
     ap.add_argument("--copies", type=int, default=10)
     ap.add_argument("--seed", type=int, default=42)

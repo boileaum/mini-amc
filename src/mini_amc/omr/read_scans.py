@@ -31,11 +31,17 @@ def main() -> None:
     args = ap.parse_args()
 
     positions = json.loads(args.positions.read_text(encoding="utf-8"))
-    scans = sorted(args.scans.glob("*.png")) + sorted(args.scans.glob("*.jpg")) + sorted(args.scans.glob("*.jpeg"))
+    scans = (
+        sorted(args.scans.glob("*.png"))
+        + sorted(args.scans.glob("*.jpg"))
+        + sorted(args.scans.glob("*.jpeg"))
+    )
     results = {}
     for scan in scans:
         results[scan.name] = process_scan(scan, positions)
-    args.out.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
+    args.out.write_text(
+        json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
 
 if __name__ == "__main__":
