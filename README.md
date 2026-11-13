@@ -34,7 +34,7 @@ typst --version                   # -> typst 0.15.1
 On macOS: replace the archive with `typst-aarch64-apple-darwin.tar.xz` (Apple Silicon) or
 `typst-x86_64-apple-darwin.tar.xz` (Intel), or `brew install typst` then check `typst --version`.
 
-## Quickstart (3 commands)
+## Quickstart (4 commands)
 
 ```bash
 # 1. Generate the copies: data/copy_XXXX.pdf + data/positions.json + data/answers.json
@@ -46,6 +46,9 @@ mini-amc-omr --scans scans --positions data/positions.json --out data/omr_result
 
 # 3. Review UI for the copies to check
 uv run uvicorn mini_amc.web.app:app --reload     # -> http://127.0.0.1:8000/copies
+
+# 4. Grades: data/notes.csv (per copy) + data/notes_detail.csv (per question)
+mini-amc-grades --data data
 ```
 
 Review UI (JSON API, interactive docs at `/docs`):

@@ -35,6 +35,7 @@ Repository = "https://github.com/boileaum/mini-amc.git"
 [project.scripts]
 mini-amc-gen = "mini_amc.gen.generate:main"
 mini-amc-omr = "mini_amc.omr.read_scans:main"
+mini-amc-grades = "mini_amc.grade.notes:main"
 
 [tool.setuptools]
 include-package-data = true

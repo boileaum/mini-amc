@@ -20,3 +20,10 @@
 .. automodule:: mini_amc.web.app
    :members:
 ```
+
+## Grading
+
+```{eval-rst}
+.. automodule:: mini_amc.grade.notes
+   :members:
+```

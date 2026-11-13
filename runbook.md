@@ -43,7 +43,8 @@
 
 ## Grades
 
-- [ ] export `data/notes.csv` (grade per copy) and `data/notes_detail.csv` (question-by-question detail)
+- [ ] `mini-amc-grades --data data` (bareme v1: 1 pt per correct answer, manual corrections override the OMR reading)
+- [ ] export check: `data/notes.csv` (one row per copy: `copy_id,status,score,score_max`) and `data/notes_detail.csv` (one row per copy/question: `copy_id,qid,page,checked,correction,expected,point,needs_review`)
 - [ ] local archiving: `data/` and `scans/` stay on the machine, never in the cloud
 
 ## If a step fails

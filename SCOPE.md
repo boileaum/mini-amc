@@ -51,8 +51,8 @@ Out of scope for v1:
 | `data/omr_results.json` | OMR results: `scans` (per scan: status `ok` / `needs_review` / `unread`, copy_id, page, questions) + `copies` (multi-page aggregate per copy_id: status `ok` / `needs_review` / `partial` / `unread`, pages, questions with page) | `omr/read_scans.py` |
 | `data/annotated/` | Straightened and annotated scans (markers, QR, detected bubbles) | `omr/read_scans.py` |
 | `data/corrections.json` | Manual corrections from the review UI: `{copy_id: {qid: [keys]}}` | `web/app.py` (D7) |
-| `data/notes.csv` | Final grade per copy | grading step (D8) |
-| `data/notes_detail.csv` | Question-by-question detail (checked answer, expected, point) | grading step (D8) |
+| `data/notes.csv` | Grade per copy: `copy_id,status,score,score_max` | `mini-amc-grades` (D8) |
+| `data/notes_detail.csv` | Question-by-question detail: `copy_id,qid,page,checked,correction,expected,point,needs_review` | `mini-amc-grades` (D8) |
 
 ## Plan in half-days
 

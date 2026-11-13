@@ -10,6 +10,8 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
+from mini_amc.grade.notes import question_point
+
 app = FastAPI(title="mini-amc review")
 
 DATA = Path(__file__).resolve().parents[3] / "data"
@@ -93,12 +95,10 @@ def _copy_status(copy_id: str, positions: dict, omr_copies: dict) -> dict:
 
 
 def _score(questions: list[dict], answers: dict) -> int:
-    score = 0
-    for q in questions:
-        effective = q["correction"] if q["correction"] is not None else q["checked"]
-        if len(effective) == 1 and effective[0] == answers.get(q["qid"]):
-            score += 1
-    return score
+    return sum(
+        question_point(q["checked"], q["correction"], answers.get(q["qid"]))
+        for q in questions
+    )
 
 
 def _copy_detail(copy_id: str) -> dict:
