@@ -9,6 +9,7 @@ template/qr-*.png
 .ty/
 .pytest_cache/
 .coverage*
+coverage.xml
 dist/
 *.egg-info/
 docs/build/

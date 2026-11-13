@@ -2,7 +2,7 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: [docs/**, src/**, README.md, pyproject.toml, uv.lock]
+    paths: [docs/**, src/**, tests/**, README.md, pyproject.toml, uv.lock]
   workflow_dispatch:
 permissions:
   pages: write
@@ -16,8 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --group doc
+      - run: uv sync --all-groups
+      - run: curl -L https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-unknown-linux-musl.tar.xz -o /tmp/typst.tar.xz && tar -xf /tmp/typst.tar.xz -C /tmp && mv /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
       - run: uv run sphinx-build -b html docs/source docs/build
+      - run: uv run pytest -q --cov
+      - run: uv run coverage html -d docs/build/coverage
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/build

@@ -3,7 +3,9 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^assets/coverage\.svg$
       - id: end-of-file-fixer
+        exclude: ^assets/coverage\.svg$
       - id: check-yaml
       - id: check-toml
       - id: check-merge-conflict
@@ -44,5 +46,17 @@ repos:
         entry: uv run pytest -q
         language: system
         types: [python]
+        pass_filenames: false
+        stages: [pre-push]
+      - id: coverage
+        name: coverage (pytest --cov + fail-under)
+        entry: uv run pytest -q --cov --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=90
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      - id: coverage-badge
+        name: coverage-badge (regenerate assets/coverage.svg)
+        entry: uv run genbadge coverage -i coverage.xml -o assets/coverage.svg
+        language: system
         pass_filenames: false
         stages: [pre-push]

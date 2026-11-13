@@ -55,7 +55,7 @@ dev = [
     { include-group = "test" },
     { include-group = "doc" },
 ]
-test = ["pytest", "pytest-cov"]
+test = ["pytest", "pytest-cov", "genbadge", "defusedxml"]
 lint = ["ruff", "ty", "pre-commit", "pydoclint"]
 doc = ["Sphinx>=7.2.2", "myst-parser", "furo", "sphinx-copybutton", "sphinxcontrib-programoutput"]
 
@@ -97,6 +97,10 @@ allowed-unresolved-imports = ["cv2", "cv2.*"]
 [tool.coverage.run]
 parallel = true
 source = ["src/"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
