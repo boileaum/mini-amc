@@ -8,5 +8,7 @@
 ```{toctree}
 :maxdepth: 2
 
+quickstart.md
+runbook.md
 api.md
 ```
