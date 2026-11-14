@@ -75,11 +75,16 @@ def _answers() -> dict:
     return load_json("answers.json", default={})
 
 
+def _students() -> dict:
+    return load_json("students.json", default={})
+
+
 def _copy_status(copy_id: str, positions: dict, omr_copies: dict) -> dict:
     expected_pages = sorted({b["page"] for b in positions[copy_id]["bubbles"]})
     expected_qids = {b["qid"] for b in positions[copy_id]["bubbles"]}
     entry = {
         "copy_id": copy_id,
+        "student": _students().get(copy_id, ""),
         "status": "unread",
         "pages": [],
         "pages_expected": expected_pages,
@@ -139,6 +144,7 @@ def _copy_detail(copy_id: str) -> dict:
     status = _copy_status(copy_id, positions, omr["copies"])
     return {
         "copy_id": copy_id,
+        "student": _students().get(copy_id, ""),
         "status": status["status"],
         "pages": status["pages"],
         "pages_expected": status["pages_expected"],

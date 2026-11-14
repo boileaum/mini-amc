@@ -1,8 +1,11 @@
 """QCM exam copy generation: seeded shuffle, Typst compilation, bubble positions."""
 
 import argparse
+import csv
+import io
 import json
 import random
+import re
 import shutil
 import string
 import subprocess
@@ -12,6 +15,7 @@ import qrcode
 import yaml
 
 MAX_PAGES = 64
+COPY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PAGE_W_CM = 21.0
 PAGE_H_CM = 29.7
 CM_TO_PT = 72 / 2.54
@@ -57,7 +61,74 @@ def load_bank(path: Path) -> dict:
     return data
 
 
-def plan_copies(bank: dict, n_copies: int, seed: int) -> list[dict]:
+def load_students(
+    path: Path,
+    id_column: str = "copy_id",
+    name_columns: list[str] | None = None,
+    delimiter: str = "",
+) -> dict[str, str]:
+    """
+    Load a nominative CSV and map copy ids to student names.
+
+    Flexible on the format (e.g. Moodle exports): the delimiter is
+    auto-detected when not given, the link column and the name column(s)
+    are designated by the caller, and all other columns are ignored.
+
+    Args:
+        path: CSV file path (UTF-8, BOM accepted).
+        id_column: Column whose values become the copy ids (the link
+            between a student and a copy). Values must be unique,
+            non-empty and match ``[A-Za-z0-9][A-Za-z0-9_.-]*`` (they are
+            used in file names and QR contents).
+        name_columns: Column(s) joined with a space to form the display
+            name (default ``["name"]``).
+        delimiter: CSV delimiter; empty string = auto-detect among
+            ``, ; tab |``.
+
+    Returns:
+        Dict ``copy_id`` -> student name, in CSV order.
+
+    Raises:
+        ValueError: Missing column, empty/duplicate/invalid copy id,
+            empty name, or no student rows.
+    """
+    if name_columns is None:
+        name_columns = ["name"]
+    text = path.read_text(encoding="utf-8-sig")
+    if not delimiter:
+        try:
+            delimiter = csv.Sniffer().sniff(text[:4096], delimiters=",;\t|").delimiter
+        except csv.Error:
+            delimiter = ","
+    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
+    fieldnames = reader.fieldnames or []
+    absent = [c for c in [id_column, *name_columns] if c not in fieldnames]
+    if absent:
+        raise ValueError(f"{path}: missing column(s) {absent} (header: {fieldnames})")
+    students = {}
+    for lineno, row in enumerate(reader, start=2):
+        cid = (row.get(id_column) or "").strip()
+        if not cid:
+            raise ValueError(f"{path}: line {lineno}: empty {id_column!r}")
+        if not COPY_ID_RE.match(cid):
+            raise ValueError(
+                f"{path}: line {lineno}: invalid copy id {cid!r} "
+                "(allowed: letters, digits, _ . -)"
+            )
+        if cid in students:
+            raise ValueError(f"{path}: duplicate copy id {cid!r}")
+        name = " ".join(" ".join((row.get(c) or "").split()) for c in name_columns)
+        if not name:
+            raise ValueError(
+                f"{path}: line {lineno}: empty name from column(s) {name_columns}"
+            )
+        students[cid] = name
+    if not students:
+        raise ValueError(f"{path}: no student rows")
+    return students
+
+
+def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
     """
     Plan the copies: seeded shuffle of questions and choices.
 
@@ -67,18 +138,26 @@ def plan_copies(bank: dict, n_copies: int, seed: int) -> list[dict]:
 
     Args:
         bank: Bank validated by :func:`load_bank`.
-        n_copies: Number of copies (ids ``0001``, ``0002``…).
+        copy_ids: Copy identifiers (``0001``, ``0002``… by default, or the
+            values of the students CSV link column). Must be unique and
+            non-empty.
         seed: Random generator seed (reproducibility).
 
     Returns:
         List of copies, each with ``copy_id``, ``meta``, ``questions``
         and ``answers``.
+
+    Raises:
+        ValueError: Empty or duplicate ``copy_ids``.
     """
+    if not copy_ids:
+        raise ValueError("no copy ids")
+    if len(set(copy_ids)) != len(copy_ids):
+        raise ValueError("duplicate copy ids")
     rng = random.Random(seed)
     questions = bank["questions"]
     copies = []
-    for i in range(1, n_copies + 1):
-        copy_id = f"{i:04d}"
+    for copy_id in copy_ids:
         answers = {}
         copy_questions = []
         for q in rng.sample(questions, len(questions)):
@@ -217,6 +296,10 @@ def main() -> None:
 
     Produces in ``--out``: ``copy_XXXX.json``, ``copy_XXXX.pdf``,
     ``positions.json`` (indexed by copy_id) and ``answers.json``.
+    With ``--students CSV``, the CSV link column provides the copy ids
+    (default column ``copy_id``, e.g. ``Numéro étudiant`` in a Moodle
+    export) and the name column(s) the student names; also writes
+    ``students.json`` and adds a ``student`` field to each copy JSON.
     Everything is staged in ``--out/.staging`` and moved into place
     only when the whole generation succeeds: a failure leaves ``--out``
     untouched.
@@ -226,12 +309,35 @@ def main() -> None:
     ap.add_argument("--copies", type=int, default=10)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--template", type=Path, default=Path("template"))
+    ap.add_argument("--students", type=Path, default=None)
+    ap.add_argument("--students-id-column", default="copy_id")
+    ap.add_argument("--students-name-columns", default="name")
+    ap.add_argument("--students-delimiter", default="")
     ap.add_argument("--out", type=Path, default=Path("data"))
     args = ap.parse_args()
 
     if args.copies < 1:
         ap.error("--copies must be >= 1")
     bank = load_bank(args.bank)
+    students = None
+    if args.students is not None:
+        name_columns = [
+            c.strip() for c in args.students_name_columns.split(",") if c.strip()
+        ]
+        students = load_students(
+            args.students,
+            id_column=args.students_id_column,
+            name_columns=name_columns,
+            delimiter=args.students_delimiter,
+        )
+        if len(students) != args.copies:
+            ap.error(
+                f"--students {args.students} has {len(students)} rows "
+                f"but --copies is {args.copies}"
+            )
+        copy_ids = list(students)
+    else:
+        copy_ids = [f"{i:04d}" for i in range(1, args.copies + 1)]
     args.out.mkdir(parents=True, exist_ok=True)
 
     stage = args.out / ".staging"
@@ -239,7 +345,13 @@ def main() -> None:
         shutil.rmtree(stage)
     stage.mkdir(parents=True)
     try:
-        copies = plan_copies(bank, args.copies, args.seed)
+        copies = plan_copies(bank, copy_ids, args.seed)
+        if students is not None:
+            for copy in copies:
+                copy["student"] = students[copy["copy_id"]]
+            (stage / "students.json").write_text(
+                json.dumps(students, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
         positions = {}
         for copy in copies:
             copy_id = copy["copy_id"]

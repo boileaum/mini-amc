@@ -14,6 +14,7 @@ Included:
 - 100% local OMR reading of scans (OpenCV): corners → homography → QR → bubbles.
 - Review web UI (FastAPI) for ambiguous cases.
 - Grade export to CSV.
+- Optional nominative CSV (``--students``): flexible on the format — delimiter auto-detected, link column (``--students-id-column``, default ``copy_id``, e.g. ``Numéro étudiant`` in a Moodle export) provides the copy ids, name column(s) (``--students-name-columns``, default ``name``, comma-separated) form the display name, all other columns ignored. Row count must equal ``--copies``. Stored locally as ``data/students.json``, joined into ``notes.csv`` (``student`` column) and shown in the review UI. Student data stays 100% local.
 
 Out of scope for v1:
 
@@ -25,7 +26,6 @@ Out of scope for v1:
 
 Out of scope for v1 but **required for the rollout with real students** (post-v1 backlog, see NOTES.md):
 
-- Nominative link CSV (`copy_id` ↔ student name) for grading (local only, student data never leaves the machine).
 - Free-text fields with boxes blackened by the grader (graded open questions, score in [0, max] entered in the review UI).
 
 ## Technical decisions (acted)
@@ -48,15 +48,18 @@ Out of scope for v1 but **required for the rollout with real students** (post-v1
 | File | Role | Produced by |
 | --- | --- | --- |
 | `bank.example.yml` | Question bank (example) | manual input |
+| `students.example.csv` | Nominative list (example), header `copy_id,name` | manual input |
+| `students.moodle.example.csv` | Moodle-style export (example): `;`-separated, link column `Numéro étudiant` | Moodle/LMS export |
 | `data/copy_XXXX.json` | One copy: shuffled questions/choices, keys A/B/C… | `gen/generate.py` |
 | `data/copy_XXXX.pdf` | The printable copy (Typst template + `copy.json` + `qr-{page}.png`) | `gen/generate.py` via `typst compile` |
 | `data/build/XXXX/` | Typst build directory of one copy (`main.typ` + `copy.json` + `qr-N.png`) | `gen/generate.py` |
 | `data/positions.json` | Bubble positions per copy (indexed by `copy_id`), extracted via `typst eval` on `#metadata(...)` | `gen/generate.py` |
 | `data/answers.json` | Correct answers per copy (answer key) | `gen/generate.py` |
+| `data/students.json` | `copy_id` → student name (from `--students`, optional) | `gen/generate.py` |
 | `data/omr_results.json` | OMR results: `scans` (per scan: status `ok` / `needs_review` / `unread`, copy_id, page, questions) + `copies` (multi-page aggregate per copy_id: status `ok` / `needs_review` / `partial` / `unread`, pages, questions with page) | `omr/read_scans.py` |
 | `data/annotated/` | Straightened and annotated scans (markers, QR, detected bubbles) | `omr/read_scans.py` |
 | `data/corrections.json` | Manual corrections from the review UI: `{copy_id: {qid: [keys]}}` | `web/app.py` (D7) |
-| `data/notes.csv` | Grade per copy: `copy_id,status,score,score_max` | `mini-amc-grades` (D8) |
+| `data/notes.csv` | Grade per copy: `copy_id,student,status,score,score_max` (`student` empty without `--students`) | `mini-amc-grades` (D8) |
 | `data/notes_detail.csv` | Question-by-question detail: `copy_id,qid,page,checked,correction,expected,point,needs_review` | `mini-amc-grades` (D8) |
 
 ## Plan in half-days

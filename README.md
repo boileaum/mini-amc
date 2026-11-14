@@ -39,6 +39,13 @@ On macOS: replace the archive with `typst-aarch64-apple-darwin.tar.xz` (Apple Si
 ```bash
 # 1. Generate the copies: data/copy_XXXX.pdf + data/positions.json + data/answers.json
 mini-amc-gen --bank bank.example.yml --copies 30 --seed 42 --out data
+# optional nominative CSV -> data/students.json + "student" column in notes.csv + student in the review UI.
+# Simple format (default columns): copy_id,name  (see students.example.csv)
+#   mini-amc-gen --bank bank.example.yml --copies 30 --seed 42 --students students.csv --out data
+# Moodle export (delimiter auto-detected, link column = student number, name from first/last name;
+# all other columns ignored, see students.moodle.example.csv):
+#   mini-amc-gen --bank bank.example.yml --copies 30 --seed 42 --students moodle.csv \
+#     --students-id-column "Numéro étudiant" --students-name-columns "Prénom,Nom" --out data
 # (equivalent: uv run python -m mini_amc.gen.generate --bank bank.example.yml ...)
 
 # 2. OMR reading of the scans placed in scans/

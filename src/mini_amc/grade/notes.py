@@ -45,7 +45,8 @@ def compute_grades(data: Path) -> tuple[list[dict], list[dict]]:
 
     Returns:
         Tuple ``(notes, detail)``: one notes row per copy (``copy_id``,
-        ``status``, ``score``, ``score_max``) and one detail row per
+        ``student`` (empty without ``students.json``), ``status``,
+        ``score``, ``score_max``) and one detail row per
         copy/question (``copy_id``, ``qid``, ``page``, ``checked``,
         ``correction``, ``expected``, ``point``, ``needs_review``).
     """
@@ -53,6 +54,7 @@ def compute_grades(data: Path) -> tuple[list[dict], list[dict]]:
     answers = _load(data, "answers.json", {})
     omr = _load(data, "omr_results.json", {"scans": {}, "copies": {}})
     corrections = _load(data, "corrections.json", {})
+    students = _load(data, "students.json", {})
     notes = []
     detail = []
     for copy_id in sorted(positions):
@@ -83,6 +85,7 @@ def compute_grades(data: Path) -> tuple[list[dict], list[dict]]:
         notes.append(
             {
                 "copy_id": copy_id,
+                "student": students.get(copy_id, ""),
                 "status": status,
                 "score": score,
                 "score_max": len(expected_map),
@@ -107,7 +110,7 @@ def write_csvs(data: Path, notes: list[dict], detail: list[dict]) -> tuple[Path,
     detail_path = data / DETAIL_CSV
     with notes_path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(
-            f, fieldnames=["copy_id", "status", "score", "score_max"]
+            f, fieldnames=["copy_id", "student", "status", "score", "score_max"]
         )
         writer.writeheader()
         writer.writerows(notes)

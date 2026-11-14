@@ -66,6 +66,9 @@ def data_dir(tmp_path):
     (data / "omr_results.json").write_text(json.dumps(omr), encoding="utf-8")
     corrections = {"0001": {"q1": ["B"], "q3": ["A"]}}
     (data / "corrections.json").write_text(json.dumps(corrections), encoding="utf-8")
+    (data / "students.json").write_text(
+        json.dumps({"0001": "Alice Example"}), encoding="utf-8"
+    )
     return data
 
 
@@ -106,11 +109,13 @@ def test_write_csvs(data_dir):
         rows = list(csv.DictReader(f))
     assert rows[0] == {
         "copy_id": "0001",
+        "student": "Alice Example",
         "status": "needs_review",
         "score": "3",
         "score_max": "3",
     }
     assert rows[1]["copy_id"] == "0002" and rows[1]["score"] == "0"
+    assert rows[1]["student"] == ""
     with detail_path.open(encoding="utf-8", newline="") as f:
         drows = list(csv.DictReader(f))
     assert len(drows) == 4

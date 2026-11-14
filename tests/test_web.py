@@ -105,6 +105,9 @@ def data_dir(tmp_path):
         },
     }
     (data / "omr_results.json").write_text(json.dumps(omr), encoding="utf-8")
+    (data / "students.json").write_text(
+        json.dumps({"0001": "Alice Example"}), encoding="utf-8"
+    )
     img = np.full((10, 10, 3), 255, np.uint8)
     cv2.imwrite(str(data / "annotated" / "s1.jpg"), img)
     cv2.imwrite(str(data / "annotated" / "s2.jpg"), img)
@@ -128,6 +131,8 @@ def test_list_copies(client):
     r = client.get("/copies")
     assert r.status_code == 200
     copies = {c["copy_id"]: c for c in r.json()["copies"]}
+    assert copies["0001"]["student"] == "Alice Example"
+    assert copies["0002"]["student"] == ""
     assert copies["0001"]["status"] == "needs_review"
     assert copies["0001"]["pages"] == [1, 2]
     assert copies["0001"]["questions_read"] == 2
@@ -141,6 +146,7 @@ def test_copy_detail(client):
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "needs_review"
+    assert body["student"] == "Alice Example"
     assert body["scans"] == {"1": "s1.jpg", "2": "s2.jpg"}
     assert body["score"] == 1 and body["score_max"] == 2
     q1 = next(q for q in body["questions"] if q["qid"] == "q1")
