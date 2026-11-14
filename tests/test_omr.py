@@ -262,3 +262,42 @@ def test_main_missing_positions(tmp_path, monkeypatch):
     )
     with pytest.raises(SystemExit):
         main()
+
+
+def test_read_bubbles_open_gradeboxes():
+    from synth import H, W, _draw_bubble
+
+    from mini_amc.omr.read_scans import read_bubbles
+
+    def make(filled_values):
+        boxes = [
+            {
+                "qid": "q9",
+                "value": v,
+                "page": 1,
+                "x_pt": 100.0,
+                "y_pt": 200.0 + 22.0 * v,
+            }
+            for v in range(3)
+        ]
+        img = np.full((H, W, 3), 255, dtype=np.uint8)
+        for b in boxes:
+            _draw_bubble(img, b, filled=(b["value"] in filled_values))
+        pos = {
+            "page": {"w_pt": 595.28, "h_pt": 841.89},
+            "questions": [],
+            "bubbles": [],
+            "gradeboxes": boxes,
+        }
+        return read_bubbles(img, pos, 1)
+
+    q = make({1})[0]
+    assert q["type"] == "open"
+    assert q["checked"] == [1]
+    assert q["needs_review"] is False
+    assert q["fills"]["1"] > 0.35
+    assert q["fills"]["0"] < 0.15
+    blank = make(set())[0]
+    assert blank["checked"] == [] and blank["needs_review"] is True
+    double = make({0, 2})[0]
+    assert double["checked"] == [0, 2] and double["needs_review"] is True

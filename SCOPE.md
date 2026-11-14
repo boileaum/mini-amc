@@ -7,8 +7,9 @@ The whole project is in English: code, docstrings, comments, documentation, CLI 
 
 Included:
 
-- Single-answer MCQ only.
-- v1 grading scheme: 1 point per correct answer, 0 otherwise, no negative points.
+- Single-answer MCQ.
+- Open (free-text) questions graded by the teacher: the copy shows a free area + grade boxes `0..max_points`; the OMR reads the blackened box and the score is its value; ungraded (no box) → `needs_review`.
+- v1 grading scheme: 1 point per correct MCQ answer, 0 otherwise, no negative points; open questions score 0..max_points.
 - Personalized PDF copy generation (question and choice shuffling, seeded and reproducible).
 - Self-contained Typst template: bubbles to check directly under each question, 4 black alignment squares in the corners of every page, 1 QR code at the top right of every page.
 - 100% local OMR reading of scans (OpenCV): corners → homography → QR → bubbles.
@@ -20,13 +21,11 @@ Out of scope for v1:
 
 - Multi-answer MCQ.
 - Advanced grading schemes (negative points, per-question schemes, etc.).
-- Moodle / LMS export.
+- Moodle / LMS export (the import direction is covered by the flexible `--students` CSV).
 - Email sending.
 - Rich UI.
 
-Out of scope for v1 but **required for the rollout with real students** (post-v1 backlog, see NOTES.md):
-
-- Free-text fields with boxes blackened by the grader (graded open questions, score in [0, max] entered in the review UI).
+The rollout backlog (nominative CSV link, grader-blackened free-text fields) is now implemented — see NOTES.md.
 
 ## Technical decisions (acted)
 
@@ -47,20 +46,20 @@ Out of scope for v1 but **required for the rollout with real students** (post-v1
 
 | File | Role | Produced by |
 | --- | --- | --- |
-| `bank.example.yml` | Question bank (example) | manual input |
+| `bank.example.yml` | Question bank (example): MCQ (`choices` + one `correct`) and open questions (`type: open`, `max_points`) | manual input |
 | `students.example.csv` | Nominative list (example), header `copy_id,name` | manual input |
 | `students.moodle.example.csv` | Moodle-style export (example): `;`-separated, link column `Numéro étudiant` | Moodle/LMS export |
 | `data/copy_XXXX.json` | One copy: shuffled questions/choices, keys A/B/C… | `gen/generate.py` |
 | `data/copy_XXXX.pdf` | The printable copy (Typst template + `copy.json` + `qr-{page}.png`) | `gen/generate.py` via `typst compile` |
 | `data/build/XXXX/` | Typst build directory of one copy (`main.typ` + `copy.json` + `qr-N.png`) | `gen/generate.py` |
-| `data/positions.json` | Bubble positions per copy (indexed by `copy_id`), extracted via `typst eval` on `#metadata(...)` | `gen/generate.py` |
+| `data/positions.json` | Positions per copy (indexed by `copy_id`): `bubbles` (MCQ) + `gradeboxes` (open questions, with `value`), extracted via `typst eval` on `#metadata(...)` | `gen/generate.py` |
 | `data/answers.json` | Correct answers per copy (answer key) | `gen/generate.py` |
 | `data/students.json` | `copy_id` → student name (from `--students`, optional) | `gen/generate.py` |
 | `data/omr_results.json` | OMR results: `scans` (per scan: status `ok` / `needs_review` / `unread`, copy_id, page, questions) + `copies` (multi-page aggregate per copy_id: status `ok` / `needs_review` / `partial` / `unread`, pages, questions with page) | `omr/read_scans.py` |
 | `data/annotated/` | Straightened and annotated scans (markers, QR, detected bubbles) | `omr/read_scans.py` |
 | `data/corrections.json` | Manual corrections from the review UI: `{copy_id: {qid: [keys]}}` | `web/app.py` (D7) |
 | `data/notes.csv` | Grade per copy: `copy_id,student,status,score,score_max` (`student` empty without `--students`) | `mini-amc-grades` (D8) |
-| `data/notes_detail.csv` | Question-by-question detail: `copy_id,qid,page,checked,correction,expected,point,needs_review` | `mini-amc-grades` (D8) |
+| `data/notes_detail.csv` | Question-by-question detail: `copy_id,qid,type,page,checked,correction,expected,point,needs_review` (`type` = `mcq`/`open`, `expected` = key or `open`) | `mini-amc-grades` (D8) |
 
 ## Plan in half-days
 

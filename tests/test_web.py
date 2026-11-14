@@ -20,13 +20,17 @@ def data_dir(tmp_path):
     positions = {
         "0001": {
             "bubbles": [_bubble("q1", k, 1) for k in "ABC"]
-            + [_bubble("q2", k, 2) for k in "ABC"]
+            + [_bubble("q2", k, 2) for k in "ABC"],
+            "gradeboxes": [
+                {"qid": "q3", "value": v, "page": 2, "x_pt": 100.0, "y_pt": 200.0}
+                for v in range(3)
+            ],
         },
         "0002": {"bubbles": [_bubble("q1", k, 1) for k in "ABC"]},
     }
     (data / "positions.json").write_text(json.dumps(positions), encoding="utf-8")
     (data / "answers.json").write_text(
-        json.dumps({"0001": {"q1": "B", "q2": "A"}}), encoding="utf-8"
+        json.dumps({"0001": {"q1": "B", "q2": "A", "q3": "open"}}), encoding="utf-8"
     )
     copy = {
         "copy_id": "0001",
@@ -50,6 +54,7 @@ def data_dir(tmp_path):
                     {"key": "C", "text": "63", "correct": False},
                 ],
             },
+            {"id": "q3", "text": "Explain 7 x 8.", "type": "open", "max_points": 2},
         ],
     }
     (data / "copy_0001.json").write_text(json.dumps(copy), encoding="utf-8")
@@ -63,6 +68,13 @@ def data_dir(tmp_path):
         "qid": "q2",
         "fills": {"A": 0.95, "B": 0.0, "C": 0.0},
         "checked": ["A"],
+        "needs_review": False,
+    }
+    q3 = {
+        "qid": "q3",
+        "type": "open",
+        "fills": {"0": 0.0, "1": 0.0, "2": 0.9},
+        "checked": [2],
         "needs_review": False,
     }
     scans = {
@@ -99,7 +111,7 @@ def data_dir(tmp_path):
         "copies": {
             "0001": {
                 "pages": [1, 2],
-                "questions": [dict(q1, page=1), dict(q2, page=2)],
+                "questions": [dict(q1, page=1), dict(q2, page=2), dict(q3, page=2)],
                 "status": "needs_review",
             }
         },
@@ -135,8 +147,8 @@ def test_list_copies(client):
     assert copies["0002"]["student"] == ""
     assert copies["0001"]["status"] == "needs_review"
     assert copies["0001"]["pages"] == [1, 2]
-    assert copies["0001"]["questions_read"] == 2
-    assert copies["0001"]["questions_total"] == 2
+    assert copies["0001"]["questions_read"] == 3
+    assert copies["0001"]["questions_total"] == 3
     assert copies["0002"]["status"] == "unread"
     assert copies["0002"]["questions_read"] == 0
 
@@ -148,7 +160,7 @@ def test_copy_detail(client):
     assert body["status"] == "needs_review"
     assert body["student"] == "Alice Example"
     assert body["scans"] == {"1": "s1.jpg", "2": "s2.jpg"}
-    assert body["score"] == 1 and body["score_max"] == 2
+    assert body["score"] == 3 and body["score_max"] == 4
     q1 = next(q for q in body["questions"] if q["qid"] == "q1")
     assert q1["checked"] == ["A", "B"]
     assert q1["needs_review"] is True
@@ -156,6 +168,9 @@ def test_copy_detail(client):
     assert q1["correction"] is None
     assert q1["page"] == 1
     assert q1["choices"][1]["text"] == "Paris"
+    q3 = next(q for q in body["questions"] if q["qid"] == "q3")
+    assert q3["type"] == "open" and q3["max_points"] == 2
+    assert q3["checked"] == [2] and q3["expected"] == "open" and q3["choices"] == []
 
 
 def test_copy_detail_unknown(client):
@@ -168,12 +183,12 @@ def test_post_correction(client, data_dir):
     body = r.json()
     q1 = next(q for q in body["questions"] if q["qid"] == "q1")
     assert q1["correction"] == ["B"]
-    assert body["score"] == 2
+    assert body["score"] == 4
     assert body["corrected"] == 1
     saved = json.loads((data_dir / "corrections.json").read_text(encoding="utf-8"))
     assert saved == {"0001": {"q1": ["B"]}}
     r = client.get("/copy/0001")
-    assert r.json()["score"] == 2
+    assert r.json()["score"] == 4
 
 
 def test_post_correction_clear(client):
@@ -182,7 +197,25 @@ def test_post_correction_clear(client):
     assert r.status_code == 200
     q1 = next(q for q in r.json()["questions"] if q["qid"] == "q1")
     assert q1["correction"] is None
-    assert r.json()["score"] == 1
+    assert r.json()["score"] == 3
+
+
+def test_post_correction_open_question(client):
+    r = client.post("/copy/0001/correction", json={"qid": "q3", "checked": [1]})
+    assert r.status_code == 200
+    assert r.json()["score"] == 2
+    assert (
+        client.post(
+            "/copy/0001/correction", json={"qid": "q3", "checked": [5]}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            "/copy/0001/correction", json={"qid": "q3", "checked": ["A"]}
+        ).status_code
+        == 422
+    )
 
 
 def test_post_correction_invalid(client):

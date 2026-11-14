@@ -23,7 +23,7 @@
 
 ## Exam
 
-- [ ] instructions: check ONE single box per question
+- [ ] instructions: check ONE single box per MCQ question; open (free-text) questions are left blank, the grader blackens one grade box (0..max) at review time
 - [ ] collect the sheets
 
 ## Scanning
@@ -41,12 +41,13 @@
 
 - [ ] `uv run uvicorn mini_amc.web.app:app --reload` → http://127.0.0.1:8000/copies
 - [ ] go through the `needs_review` / `partial` / `unread` copies one by one (annotated scan + detected choices)
-- [ ] save the manual corrections; the score is recomputed on each correction
+- [ ] grade the open questions: blacken one grade box per open question (the detected box is pre-read by the OMR; `POST /copy/{id}/correction` with `{"qid": ..., "checked": [value]}` overrides it)
+- [ ] save the manual corrections; the score is recomputed on each correction (MCQ: 1 pt; open: the box value)
 
 ## Grades
 
 - [ ] `mini-amc-grades --data data` (bareme v1: 1 pt per correct answer, manual corrections override the OMR reading)
-- [ ] export check: `data/notes.csv` (one row per copy: `copy_id,student,status,score,score_max`) and `data/notes_detail.csv` (one row per copy/question: `copy_id,qid,page,checked,correction,expected,point,needs_review`)
+- [ ] export check: `data/notes.csv` (one row per copy: `copy_id,student,status,score,score_max`) and `data/notes_detail.csv` (one row per copy/question: `copy_id,qid,type,page,checked,correction,expected,point,needs_review`)
 - [ ] local archiving: `data/` and `scans/` stay on the machine, never in the cloud
 
 ## If a step fails

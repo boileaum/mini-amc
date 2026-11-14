@@ -8,7 +8,8 @@ def test_load_bank_example():
     from mini_amc.gen.generate import load_bank
 
     bank = load_bank(Path("bank.example.yml"))
-    assert len(bank["questions"]) == 4
+    assert len(bank["questions"]) == 5
+    assert sum(1 for q in bank["questions"] if q.get("type") == "open") == 1
 
 
 def test_modules_importables():

@@ -200,13 +200,15 @@ def read_bubbles(
     gray_threshold: float = GRAY_THRESHOLD,
 ) -> list[dict]:
     """
-    Read the checked bubbles of a straightened page.
+    Read the checked bubbles and grade boxes of a straightened page.
 
-    For each bubble, measures the ink density of the inner disk
+    For each bubble/grade box, measures the ink density of the inner disk
     (center = metadata + calibrated offset). A choice is checked if
     its fill >= ``threshold``; ``needs_review`` if several choices are
     checked or a gray trace exists (fill between ``gray_threshold`` and
-    ``threshold``).
+    ``threshold``). For open questions (grade boxes), ``needs_review``
+    also when no box is blackened (not graded yet): exactly one box must
+    be checked.
 
     Args:
         warped: Straightened and reoriented page.
@@ -216,18 +218,17 @@ def read_bubbles(
         gray_threshold: Fill threshold for detecting a gray trace.
 
     Returns:
-        List of questions (``qid``, ``fills`` per key, ``checked``,
-        ``needs_review``), sorted by ``qid``.
+        List of questions (``qid``, ``type`` ``mcq``/``open``, ``fills``
+        per key/value, ``checked`` (choice keys, or the graded value for
+        open questions), ``needs_review``), sorted by ``qid``.
     """
     gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
     _, bw = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY_INV)
     h, w = gray.shape
     s = w / PAGE_W_PT
     r = max(1, int(FILL_R_PT * s))
-    questions: dict[str, dict] = {}
-    for b in copy_positions["bubbles"]:
-        if b["page"] != page:
-            continue
+
+    def measure(b: dict) -> float:
         cx = int((b["x_pt"] + BUBBLE_DX_PT) * s)
         cy = int((b["y_pt"] + BUBBLE_DY_PT) * s)
         y0, y1 = max(0, cy - r), min(h, cy + r)
@@ -236,21 +237,42 @@ def read_bubbles(
         mask = np.zeros(patch.shape, dtype=np.uint8)
         cv2.circle(mask, (cx - x0, cy - y0), r, 255, -1)
         sel = patch[mask > 0]
-        fill = float(sel.mean()) / 255 if sel.size else 0.0
+        return float(sel.mean()) / 255 if sel.size else 0.0
+
+    questions: dict[str, dict] = {}
+    for b in copy_positions["bubbles"]:
+        if b["page"] != page:
+            continue
         q = questions.setdefault(
-            b["qid"], {"qid": b["qid"], "fills": {}, "checked": []}
+            b["qid"], {"qid": b["qid"], "type": "mcq", "fills": {}, "checked": []}
         )
-        q["fills"][b["key"]] = round(fill, 3)
+        q["fills"][b["key"]] = round(measure(b), 3)
+    for b in copy_positions.get("gradeboxes", []):
+        if b["page"] != page:
+            continue
+        q = questions.setdefault(
+            b["qid"], {"qid": b["qid"], "type": "open", "fills": {}, "checked": []}
+        )
+        q["fills"][str(b["value"])] = round(measure(b), 3)
     result = []
     for qid in sorted(questions):
         q = questions[qid]
-        q["fills"] = dict(sorted(q["fills"].items()))
+
+        def sort_key(item) -> tuple:
+            k = item[0]
+            return (0, int(k)) if k.isdigit() else (1, k)
+
+        q["fills"] = dict(sorted(q["fills"].items(), key=sort_key))
         checked = [k for k, f in q["fills"].items() if f >= threshold]
         gray_marks = [
             k for k, f in q["fills"].items() if gray_threshold <= f < threshold
         ]
-        q["checked"] = checked
-        q["needs_review"] = len(checked) > 1 or len(gray_marks) > 0
+        if q["type"] == "open":
+            q["checked"] = [int(k) for k in checked]
+            q["needs_review"] = len(checked) != 1 or len(gray_marks) > 0
+        else:
+            q["checked"] = checked
+            q["needs_review"] = len(checked) > 1 or len(gray_marks) > 0
         result.append(q)
     return result
 
@@ -278,6 +300,19 @@ def _draw_annotations(
         cy = int((b["y_pt"] + BUBBLE_DY_PT) * s)
         q = qmap[b["qid"]]
         if b["key"] in q["checked"]:
+            color = (0, 180, 0)
+        elif q["needs_review"]:
+            color = (0, 0, 255)
+        else:
+            color = (160, 160, 160)
+        cv2.circle(warped, (cx, cy), int(BUBBLE_R_PT * s), color, 2)
+    for b in copy_positions.get("gradeboxes", []):
+        if b["page"] != page:
+            continue
+        cx = int((b["x_pt"] + BUBBLE_DX_PT) * s)
+        cy = int((b["y_pt"] + BUBBLE_DY_PT) * s)
+        q = qmap[b["qid"]]
+        if b["value"] in q["checked"]:
             color = (0, 180, 0)
         elif q["needs_review"]:
             color = (0, 0, 255)

@@ -39,12 +39,25 @@
   #block(breakable: false)[
     #context [#metadata((kind: "question", copy: copy.copy_id, qid: q.id, page: here().page(), x: here().position().x, y: here().position().y))]
     #text(weight: "bold")[#q.id - #q.text]
-    #for c in q.choices [
-      #block[
-        #context [#metadata((kind: "bubble", copy: copy.copy_id, qid: q.id, key: c.key, page: here().page(), x: here().position().x, y: here().position().y))]
+    #if q.at("type", default: "mcq") == "open" [
+      #block(width: 100%, height: 3cm, stroke: 0.5pt)
+      #v(0.2cm)
+      #text(9pt)[Grade:]
+      #for v in range(0, q.max_points + 1) [
+        #context [#metadata((kind: "gradebox", copy: copy.copy_id, qid: q.id, value: v, page: here().page(), x: here().position().x, y: here().position().y))]
         #box(circle(radius: 4.5pt, stroke: 1pt))
-        #h(0.4em)
-        #c.key - #c.text
+        #h(0.3em)
+        #v
+        #h(0.8em)
+      ]
+    ] else [
+      #for c in q.choices [
+        #block[
+          #context [#metadata((kind: "bubble", copy: copy.copy_id, qid: q.id, key: c.key, page: here().page(), x: here().position().x, y: here().position().y))]
+          #box(circle(radius: 4.5pt, stroke: 1pt))
+          #h(0.4em)
+          #c.key - #c.text
+        ]
       ]
     ]
   ]

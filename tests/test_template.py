@@ -15,10 +15,11 @@ N_QUESTIONS = 40
 
 def _build_copy(dir_path: Path) -> None:
     shutil.copy(Path("template/main.typ"), dir_path / "main.typ")
-    questions = [
+    questions: list[dict] = [
         {
             "id": f"q{i}",
             "text": f"Question number {i}?",
+            "type": "mcq",
             "choices": [
                 {"key": "A", "text": f"choice A {i}", "correct": False},
                 {"key": "B", "text": f"choice B {i}", "correct": True},
@@ -27,6 +28,14 @@ def _build_copy(dir_path: Path) -> None:
         }
         for i in range(1, N_QUESTIONS + 1)
     ]
+    questions.append(
+        {
+            "id": "qopen",
+            "text": "Explain something.",
+            "type": "open",
+            "max_points": 3,
+        }
+    )
     copy = {
         "copy_id": "9999",
         "meta": {"title": "Test", "course": "T", "date": "2026-11-13"},
@@ -57,11 +66,15 @@ def test_multipage_and_positions(tmp_path):
     )
     metas = _query_metadata(tmp_path)
     bubbles = [m for m in metas if m["kind"] == "bubble"]
+    gradeboxes = [m for m in metas if m["kind"] == "gradebox"]
     questions = [m for m in metas if m["kind"] == "question"]
-    assert len(questions) == N_QUESTIONS
+    assert len(questions) == N_QUESTIONS + 1
     assert len(bubbles) == N_QUESTIONS * 3
+    assert len(gradeboxes) == 4
+    assert sorted(g["value"] for g in gradeboxes) == [0, 1, 2, 3]
+    assert all(g["qid"] == "qopen" for g in gradeboxes)
     assert max(b["page"] for b in bubbles) >= 2
-    for b in bubbles:
+    for b in bubbles + gradeboxes:
         assert b["x"].endswith("pt")
         assert b["y"].endswith("pt")
         assert b["page"] >= 1

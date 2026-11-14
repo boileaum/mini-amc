@@ -23,12 +23,14 @@ from mini_amc.omr.read_scans import (
 
 N_COPIES = 30
 N_QUESTIONS = 40
+N_OPEN = 2
 SEED = 7
 TEMPLATE = Path("template")
+SCORE_MAX = (N_QUESTIONS - N_OPEN) * 1 + 2 + 3
 
 
 def _write_bank(path: Path) -> None:
-    questions = [
+    questions: list[dict] = [
         {
             "id": f"q{i}",
             "text": f"Question number {i}?",
@@ -36,8 +38,14 @@ def _write_bank(path: Path) -> None:
                 {"text": f"choice {j}", "correct": j == i % 3} for j in range(3)
             ],
         }
-        for i in range(1, N_QUESTIONS + 1)
+        for i in range(1, N_QUESTIONS - N_OPEN + 1)
     ]
+    questions.append(
+        {"id": "q39", "text": "Open question 39?", "type": "open", "max_points": 2}
+    )
+    questions.append(
+        {"id": "q40", "text": "Open question 40?", "type": "open", "max_points": 3}
+    )
     path.write_text(
         yaml.dump(
             {
@@ -72,6 +80,18 @@ def _page_image(copy_id: str, page: int, copy_pos: dict, answers: dict):
             img, (cx, cy), int(BUBBLE_R_PT * SCALE), (0, 0, 0), max(1, int(SCALE))
         )
         if answers.get(b["qid"]) == b["key"]:
+            cv2.circle(img, (cx, cy), int(3.2 * SCALE), (0, 0, 0), -1)
+    gradeboxes = copy_pos.get("gradeboxes", [])
+    for g in gradeboxes:
+        if g["page"] != page:
+            continue
+        cx = int((g["x_pt"] + BUBBLE_DX_PT) * SCALE)
+        cy = int((g["y_pt"] + BUBBLE_DY_PT) * SCALE)
+        cv2.circle(
+            img, (cx, cy), int(BUBBLE_R_PT * SCALE), (0, 0, 0), max(1, int(SCALE))
+        )
+        qmax = max(gb["value"] for gb in gradeboxes if gb["qid"] == g["qid"])
+        if g["value"] == qmax:
             cv2.circle(img, (cx, cy), int(3.2 * SCALE), (0, 0, 0), -1)
     return img
 
@@ -150,12 +170,17 @@ def pipeline(tmp_path_factory):
     with pytest.MonkeyPatch.context() as m:
         m.setattr("sys.argv", ["mini-amc-grades", "--data", str(data)])
         grades_main()
+    copies_meta = {
+        cid: json.loads((data / f"copy_{cid}.json").read_text(encoding="utf-8"))
+        for cid in positions
+    }
     return {
         "root": root,
         "data": data,
         "positions": positions,
         "answers": answers,
         "results": results,
+        "copies_meta": copies_meta,
         "n_scans": n_scans,
     }
 
@@ -166,7 +191,10 @@ def test_e2e_generation(pipeline):
         copy_pos = pipeline["positions"][cid]
         pages = sorted({b["page"] for b in copy_pos["bubbles"]})
         assert pages, cid
-        assert len({b["qid"] for b in copy_pos["bubbles"]}) == N_QUESTIONS
+        qids = {b["qid"] for b in copy_pos["bubbles"]} | {
+            g["qid"] for g in copy_pos.get("gradeboxes", [])
+        }
+        assert len(qids) == N_QUESTIONS
 
 
 def test_e2e_omr_all_copies_ok(pipeline):
@@ -177,7 +205,15 @@ def test_e2e_omr_all_copies_ok(pipeline):
         read = {q["qid"]: q["checked"] for q in c["questions"]}
         assert len(read) == N_QUESTIONS
         for qid, expected in pipeline["answers"][cid].items():
-            assert read[qid] == [expected], (cid, qid, read[qid], expected)
+            if expected == "open":
+                mp = next(
+                    q["max_points"]
+                    for q in pipeline["copies_meta"][cid]["questions"]
+                    if q["id"] == qid
+                )
+                assert read[qid] == [mp], (cid, qid, read[qid], mp)
+            else:
+                assert read[qid] == [expected], (cid, qid, read[qid], expected)
 
 
 def test_e2e_grades(pipeline):
@@ -186,13 +222,15 @@ def test_e2e_grades(pipeline):
     assert len(rows) == N_COPIES
     for r in rows:
         assert r["status"] == "ok"
-        assert r["score"] == r["score_max"] == str(N_QUESTIONS)
+        assert r["score"] == r["score_max"] == str(SCORE_MAX)
     with (pipeline["data"] / "notes_detail.csv").open(
         encoding="utf-8", newline=""
     ) as f:
         detail = list(csv.DictReader(f))
     assert len(detail) == N_COPIES * N_QUESTIONS
-    assert all(r["point"] == "1" for r in detail)
+    assert all(r["point"] != "0" for r in detail)
+    assert {r["type"] for r in detail} == {"mcq", "open"}
+    assert all(r["point"] in ("2", "3") for r in detail if r["type"] == "open")
 
 
 def test_e2e_web_and_correction(pipeline, monkeypatch):
@@ -208,16 +246,16 @@ def test_e2e_web_and_correction(pipeline, monkeypatch):
     assert len(copies) == N_COPIES
     assert all(c["status"] == "ok" for c in copies)
     r = client.get("/copy/0001")
-    assert r.json()["score"] == N_QUESTIONS
-    qid = next(iter(pipeline["answers"]["0001"]))
+    assert r.json()["score"] == SCORE_MAX
+    qid = next(q for q, v in pipeline["answers"]["0001"].items() if v != "open")
     wrong = next(k for k in "ABC" if k != pipeline["answers"]["0001"][qid])
     r = client.post("/copy/0001/correction", json={"qid": qid, "checked": [wrong]})
     assert r.status_code == 200
-    assert r.json()["score"] == N_QUESTIONS - 1
+    assert r.json()["score"] == SCORE_MAX - 1
     with pytest.MonkeyPatch.context() as m:
         m.setattr("sys.argv", ["mini-amc-grades", "--data", str(pipeline["data"])])
         grades_main()
     with (pipeline["data"] / "notes.csv").open(encoding="utf-8", newline="") as f:
         rows = {r["copy_id"]: r for r in csv.DictReader(f)}
-    assert rows["0001"]["score"] == str(N_QUESTIONS - 1)
-    assert rows["0002"]["score"] == str(N_QUESTIONS)
+    assert rows["0001"]["score"] == str(SCORE_MAX - 1)
+    assert rows["0002"]["score"] == str(SCORE_MAX)

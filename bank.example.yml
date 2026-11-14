@@ -35,3 +35,8 @@ questions:
       - text: "1789"
         correct: true
       - text: "1815"
+
+  - id: q5
+    type: open
+    text: "Briefly explain the French Revolution."
+    max_points: 2

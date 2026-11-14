@@ -32,8 +32,10 @@ def load_bank(path: Path) -> dict:
         The parsed bank (dict with ``meta`` and ``questions``).
 
     Raises:
-        ValueError: Empty bank, or a question without exactly one
-            ``correct`` choice, or choice count outside [2, 26].
+        ValueError: Empty bank, duplicate/missing ids, an MCQ question
+            without exactly one ``correct`` choice or with a choice count
+            outside [2, 26], or an open question with invalid
+            ``max_points`` / with ``choices``.
     """
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     questions = data.get("questions", [])
@@ -47,8 +49,23 @@ def load_bank(path: Path) -> dict:
             f"duplicate question ids: {sorted({i for i in ids if ids.count(i) > 1})}"
         )
     for q in questions:
-        if "text" not in q or "choices" not in q:
-            raise ValueError(f"question {q.get('id')}: 'text' and 'choices' required")
+        if "text" not in q:
+            raise ValueError(f"question {q.get('id')}: 'text' required")
+        if q.get("type", "mcq") == "open":
+            if "choices" in q:
+                raise ValueError(
+                    f"question {q.get('id')}: open question must not have choices"
+                )
+            mp = q.get("max_points")
+            if not isinstance(mp, int) or isinstance(mp, bool) or mp < 1:
+                raise ValueError(
+                    f"question {q.get('id')}: open question needs max_points (int >= 1)"
+                )
+            if mp > 20:
+                raise ValueError(f"question {q.get('id')}: max_points <= 20")
+            continue
+        if "choices" not in q:
+            raise ValueError(f"question {q.get('id')}: 'choices' required")
         correct = [c for c in q["choices"] if c.get("correct")]
         if len(correct) != 1:
             raise ValueError(
@@ -161,6 +178,17 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
         answers = {}
         copy_questions = []
         for q in rng.sample(questions, len(questions)):
+            if q.get("type", "mcq") == "open":
+                copy_questions.append(
+                    {
+                        "id": q["id"],
+                        "text": q["text"],
+                        "type": "open",
+                        "max_points": q["max_points"],
+                    }
+                )
+                answers[q["id"]] = "open"
+                continue
             choices = rng.sample(q["choices"], len(q["choices"]))
             copy_choices = []
             for c, key in zip(choices, string.ascii_uppercase, strict=False):
@@ -170,7 +198,12 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
                 if c.get("correct"):
                     answers[q["id"]] = key
             copy_questions.append(
-                {"id": q["id"], "text": q["text"], "choices": copy_choices}
+                {
+                    "id": q["id"],
+                    "text": q["text"],
+                    "type": "mcq",
+                    "choices": copy_choices,
+                }
             )
         copies.append(
             {
@@ -251,9 +284,10 @@ def export_positions(build_dir: Path, copy_id: str) -> dict:
         copy_id: Copy identifier (key in ``positions.json``).
 
     Returns:
-        Dict with ``copy_id``, ``page`` (``w_pt``/``h_pt``), ``questions``
-        and ``bubbles`` (each with ``qid``, ``page``, ``x_pt``, ``y_pt``,
-        plus ``key`` for bubbles).
+        Dict with ``copy_id``, ``page`` (``w_pt``/``h_pt``), ``questions``,
+        ``bubbles`` (each with ``qid``, ``page``, ``x_pt``, ``y_pt``,
+        plus ``key`` for bubbles) and ``gradeboxes`` (same, plus ``value``
+        for open questions).
 
     Raises:
         RuntimeError: ``typst`` missing or ``typst eval`` failure.
@@ -286,6 +320,9 @@ def export_positions(build_dir: Path, copy_id: str) -> dict:
         "questions": [_pos(m) for m in metas if m["kind"] == "question"],
         "bubbles": [
             {**_pos(m), "key": m["key"]} for m in metas if m["kind"] == "bubble"
+        ],
+        "gradeboxes": [
+            {**_pos(m), "value": m["value"]} for m in metas if m["kind"] == "gradebox"
         ],
     }
 

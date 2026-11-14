@@ -31,6 +31,9 @@ def test_plan_copies_validity():
     for c in copies:
         assert {q["id"] for q in c["questions"]} == qids
         for q in c["questions"]:
+            if q["type"] == "open":
+                assert c["answers"][q["id"]] == "open"
+                continue
             keys = [ch["key"] for ch in q["choices"]]
             assert keys == list("ABC"[: len(keys)])
             corrects = [ch for ch in q["choices"] if ch["correct"]]
@@ -63,13 +66,19 @@ def test_compile_and_positions(tmp_path):
         build = compile_copy(TEMPLATE, copy_json, pdf)
         assert pdf.stat().st_size > 0
         pos = export_positions(build, cid)
-        n_choices = sum(len(q["choices"]) for q in c["questions"])
+        n_choices = sum(len(q.get("choices", [])) for q in c["questions"])
+        n_gradeboxes = sum(
+            q.get("max_points", 0) + 1
+            for q in c["questions"]
+            if q.get("type") == "open"
+        )
         assert pos["copy_id"] == cid
         assert len(pos["questions"]) == len(c["questions"])
         assert len(pos["bubbles"]) == n_choices
+        assert len(pos["gradeboxes"]) == n_gradeboxes
         assert pos["page"]["w_pt"] == pytest.approx(595.28, abs=0.01)
         assert pos["page"]["h_pt"] == pytest.approx(841.89, abs=0.01)
-        for b in pos["bubbles"]:
+        for b in pos["bubbles"] + pos["gradeboxes"]:
             assert 0 < b["x_pt"] < pos["page"]["w_pt"]
             assert 0 < b["y_pt"] < pos["page"]["h_pt"]
 
@@ -103,10 +112,13 @@ def test_main_end_to_end(tmp_path, monkeypatch):
     assert set(positions) == {"0001", "0002"}
     assert set(answers) == {"0001", "0002"}
     for cid, ans in answers.items():
-        assert set(ans) == {"q1", "q2", "q3", "q4"}
-        assert all(k in "ABC" for k in ans.values())
+        assert set(ans) == {"q1", "q2", "q3", "q4", "q5"}
+        assert ans["q5"] == "open"
+        assert all(k in "ABC" for k, v in ans.items() if k != "q5" for k in [v])
         copy_json = json.loads((tmp_path / f"copy_{cid}.json").read_text())
         for q in copy_json["questions"]:
+            if q["type"] == "open":
+                continue
             assert ans[q["id"]] == next(c["key"] for c in q["choices"] if c["correct"])
 
 
@@ -132,7 +144,7 @@ def test_load_bank_rejects_invalid_questions(tmp_path):
         json.dumps({"questions": [{k: v for k, v in base_q.items() if k != "text"}]}),
         encoding="utf-8",
     )
-    with pytest.raises(ValueError, match="'text' and 'choices' required"):
+    with pytest.raises(ValueError, match="'text' required"):
         load_bank(notext)
 
 
@@ -322,3 +334,57 @@ def test_main_students_count_mismatch(tmp_path, monkeypatch):
     )
     with pytest.raises(SystemExit):
         main()
+
+
+def test_load_bank_open_question(tmp_path):
+    good = tmp_path / "good.json"
+    good.write_text(
+        json.dumps(
+            {
+                "questions": [
+                    {
+                        "id": "q1",
+                        "text": "t",
+                        "type": "open",
+                        "max_points": 3,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    bank = load_bank(good)
+    assert bank["questions"][0]["type"] == "open"
+    for bad_q, match in [
+        ({"id": "q1", "text": "t", "type": "open"}, "max_points"),
+        ({"id": "q1", "text": "t", "type": "open", "max_points": 0}, "max_points"),
+        (
+            {"id": "q1", "text": "t", "type": "open", "max_points": 21},
+            "max_points <= 20",
+        ),
+        (
+            {
+                "id": "q1",
+                "text": "t",
+                "type": "open",
+                "max_points": 2,
+                "choices": [{"text": "a", "correct": True}],
+            },
+            "must not have choices",
+        ),
+        ({"id": "q1", "text": "t"}, "'choices' required"),
+    ]:
+        p = tmp_path / "bad.json"
+        p.write_text(json.dumps({"questions": [bad_q]}), encoding="utf-8")
+        with pytest.raises(ValueError, match=match):
+            load_bank(p)
+
+
+def test_plan_copies_open_question():
+    bank = load_bank(BANK)
+    copies = plan_copies(bank, ["0001"], 42)
+    q5 = next(q for q in copies[0]["questions"] if q["id"] == "q5")
+    assert q5["type"] == "open" and q5["max_points"] == 2 and "choices" not in q5
+    assert copies[0]["answers"]["q5"] == "open"
+    q1 = next(q for q in copies[0]["questions"] if q["id"] == "q1")
+    assert q1["type"] == "mcq" and "choices" in q1

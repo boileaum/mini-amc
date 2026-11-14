@@ -80,8 +80,13 @@ def _students() -> dict:
 
 
 def _copy_status(copy_id: str, positions: dict, omr_copies: dict) -> dict:
-    expected_pages = sorted({b["page"] for b in positions[copy_id]["bubbles"]})
-    expected_qids = {b["qid"] for b in positions[copy_id]["bubbles"]}
+    expected_pages = sorted(
+        {b["page"] for b in positions[copy_id]["bubbles"]}
+        | {g["page"] for g in positions[copy_id].get("gradeboxes", [])}
+    )
+    expected_qids = {b["qid"] for b in positions[copy_id]["bubbles"]} | {
+        g["qid"] for g in positions[copy_id].get("gradeboxes", [])
+    }
     entry = {
         "copy_id": copy_id,
         "student": _students().get(copy_id, ""),
@@ -101,7 +106,9 @@ def _copy_status(copy_id: str, positions: dict, omr_copies: dict) -> dict:
 
 def _score(questions: list[dict], answers: dict) -> int:
     return sum(
-        question_point(q["checked"], q["correction"], answers.get(q["qid"]))
+        question_point(
+            q["checked"], q["correction"], answers.get(q["qid"]), q.get("max_points")
+        )
         for q in questions
     )
 
@@ -122,17 +129,27 @@ def _copy_detail(copy_id: str) -> dict:
         if s.get("copy_id") == copy_id and s["status"] != "unread"
     }
     questions = []
+    score_max = 0
     for q in content["questions"]:
         qid = q["id"]
+        is_open = q.get("type", "mcq") == "open"
+        mp = q.get("max_points")
+        score_max += mp if is_open and isinstance(mp, int) else 1
         omr_q = omr_questions.get(qid)
         questions.append(
             {
                 "qid": qid,
                 "text": q["text"],
-                "choices": [
-                    {"key": c["key"], "text": c["text"], "correct": c["correct"]}
-                    for c in q["choices"]
-                ],
+                "type": "open" if is_open else "mcq",
+                "max_points": q.get("max_points"),
+                "choices": (
+                    []
+                    if is_open
+                    else [
+                        {"key": c["key"], "text": c["text"], "correct": c["correct"]}
+                        for c in q["choices"]
+                    ]
+                ),
                 "page": omr_q["page"] if omr_q else None,
                 "checked": list(omr_q["checked"]) if omr_q else [],
                 "fills": omr_q["fills"] if omr_q else {},
@@ -152,7 +169,7 @@ def _copy_detail(copy_id: str) -> dict:
         "questions": questions,
         "corrected": len(corrections),
         "score": _score(questions, answers),
-        "score_max": len(questions),
+        "score_max": score_max,
     }
 
 
@@ -278,16 +295,32 @@ def post_correction(copy_id: str, payload: dict) -> dict:
     question = next((q for q in content["questions"] if q["id"] == qid), None)
     if question is None:
         raise HTTPException(status_code=404, detail=f"unknown qid {qid}")
-    valid_keys = {c["key"] for c in question["choices"]}
-    if (
-        not isinstance(checked, list)
-        or any(k not in valid_keys for k in checked)
-        or len(set(checked)) != len(checked)
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail=f"checked must be distinct valid keys {sorted(valid_keys)}",
+    if question.get("type", "mcq") == "open":
+        max_points = question.get("max_points", 0)
+        valid = (
+            isinstance(checked, list)
+            and all(
+                isinstance(k, int) and not isinstance(k, bool) and 0 <= k <= max_points
+                for k in checked
+            )
+            and len(set(checked)) == len(checked)
         )
+        if not valid:
+            raise HTTPException(
+                status_code=422,
+                detail=f"checked must be distinct integer values in [0, {max_points}]",
+            )
+    else:
+        valid_keys = {c["key"] for c in question["choices"]}
+        if (
+            not isinstance(checked, list)
+            or any(k not in valid_keys for k in checked)
+            or len(set(checked)) != len(checked)
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=f"checked must be distinct valid keys {sorted(valid_keys)}",
+            )
     corrections = _corrections()
     copy_corrections = corrections.setdefault(copy_id, {})
     if checked:
