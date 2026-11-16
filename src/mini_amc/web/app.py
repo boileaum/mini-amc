@@ -53,6 +53,8 @@ def save_json(name: str, content: dict) -> None:
     """
     path = DATA / name
     path.parent.mkdir(parents=True, exist_ok=True)
+    # write to a temp file + rename: a crash mid-write must never leave a
+    # truncated corrections.json
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{name}.", suffix=".tmp")
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(content, f, indent=2, ensure_ascii=False)

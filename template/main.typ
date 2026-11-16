@@ -7,7 +7,11 @@
 #set page(
   width: 21cm,
   height: 29.7cm,
+  // top margin 4.5cm so the body never overlaps the QR/markers
   margin: (top: 4.5cm, right: 2.5cm, bottom: 2.5cm, left: 2.5cm),
+  // drawn in the page background so they appear on every page, including
+  // overflow pages; right/bottom corners need negative dx/dy (place() is
+  // relative to the corner, the square must go inward)
   background: [
     #place(top + left, dx: corner, dy: corner, square(size: marker, fill: black))
     #place(top + right, dx: -corner, dy: corner, square(size: marker, fill: black))
@@ -39,6 +43,7 @@
   #block(breakable: false)[
     #context [#metadata((kind: "question", copy: copy.copy_id, qid: q.id, page: here().page(), x: here().position().x, y: here().position().y))]
     #text(weight: "bold")[#q.id - #q.text]
+    // .at(default:) keeps hand-written copy.json files (without "type") working
     #if q.at("type", default: "mcq") == "open" [
       #block(width: 100%, height: 3cm, stroke: 0.5pt)
       #v(0.2cm)

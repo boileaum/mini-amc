@@ -15,6 +15,7 @@ import qrcode
 import yaml
 
 MAX_PAGES = 64
+# copy ids end up in file names and QR contents: keep them path/QR safe
 COPY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PAGE_W_CM = 21.0
 PAGE_H_CM = 29.7
@@ -111,6 +112,7 @@ def load_students(
     """
     if name_columns is None:
         name_columns = ["name"]
+    # utf-8-sig: Moodle/Windows exports often carry a BOM
     text = path.read_text(encoding="utf-8-sig")
     if not delimiter:
         try:
@@ -263,6 +265,8 @@ def compile_copy(template_dir: Path, copy: dict, out_pdf: Path) -> Path:
         text=True,
     )
     if proc.returncode != 0:
+        # only MAX_PAGES QR PNGs are pre-generated; typst fails on the missing
+        # qr-N.png when the copy exceeds MAX_PAGES pages
         if "qr-" in proc.stderr and "not found" in proc.stderr:
             raise RuntimeError(
                 f"copy {copy_id}: more than {MAX_PAGES} pages "
@@ -327,9 +331,9 @@ def export_positions(build_dir: Path, copy_id: str) -> dict:
     }
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     """
-    CLI entry point ``mini-amc-gen``.
+    Subcommand ``mini-amc generate`` (via ``mini_amc.cli``).
 
     Produces in ``--out``: ``copy_XXXX.json``, ``copy_XXXX.pdf``,
     ``positions.json`` (indexed by copy_id) and ``answers.json``.
@@ -351,7 +355,7 @@ def main() -> None:
     ap.add_argument("--students-name-columns", default="name")
     ap.add_argument("--students-delimiter", default="")
     ap.add_argument("--out", type=Path, default=Path("data"))
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     if args.copies < 1:
         ap.error("--copies must be >= 1")
@@ -377,6 +381,8 @@ def main() -> None:
         copy_ids = [f"{i:04d}" for i in range(1, args.copies + 1)]
     args.out.mkdir(parents=True, exist_ok=True)
 
+    # stage everything, move into place only on full success: a failed run
+    # must not leave a half-written data/ (old PDFs stay valid until then)
     stage = args.out / ".staging"
     if stage.exists():
         shutil.rmtree(stage)

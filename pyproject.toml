@@ -33,9 +33,7 @@ content-type = "text/markdown"
 Repository = "https://github.com/boileaum/mini-amc.git"
 
 [project.scripts]
-mini-amc-gen = "mini_amc.gen.generate:main"
-mini-amc-omr = "mini_amc.omr.read_scans:main"
-mini-amc-grades = "mini_amc.grade.notes:main"
+mini-amc = "mini_amc.cli:main"
 
 [tool.setuptools]
 include-package-data = true
@@ -58,7 +56,15 @@ dev = [
 ]
 test = ["pytest", "pytest-cov", "genbadge", "defusedxml", "httpx2"]
 lint = ["ruff", "ty", "pre-commit", "pydoclint"]
-doc = ["Sphinx>=7.2.2", "myst-parser", "furo", "sphinx-copybutton", "sphinxcontrib-programoutput"]
+doc = [
+    "Sphinx>=7.2.2",
+    "myst-parser",
+    "furo",
+    "sphinx-copybutton",
+    "sphinxcontrib-programoutput",
+    "sphinxcontrib-mermaid",
+    "sphinx-autobuild",
+]
 
 [tool.ruff]
 line-length = 88

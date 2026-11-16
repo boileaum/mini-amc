@@ -162,11 +162,11 @@ def write_csvs(data: Path, notes: list[dict], detail: list[dict]) -> tuple[Path,
     return notes_path, detail_path
 
 
-def main() -> None:
-    """CLI entry point ``mini-amc-grades``: compute the grades and write the CSVs."""
+def main(argv: list[str] | None = None) -> None:
+    """Subcommand ``mini-amc grades``: compute grades, write the CSVs."""
     ap = argparse.ArgumentParser(description="Grades (bareme v1) + CSV export")
     ap.add_argument("--data", type=Path, default=Path("data"))
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     notes, detail = compute_grades(args.data)
     notes_path, detail_path = write_csvs(args.data, notes, detail)
     total = sum(n["score"] for n in notes)

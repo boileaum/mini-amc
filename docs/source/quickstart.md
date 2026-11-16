@@ -38,16 +38,16 @@ Optionally, a nominative CSV links copy ids to students (see `students.example.c
 
 ```bash
 # simple format: copy_id,name
-mini-amc-gen --bank bank.yml --copies 30 --seed 42 --students students.csv --out data
+mini-amc generate --bank bank.yml --copies 30 --seed 42 --students students.csv --out data
 # Moodle export: link column = student number, name from first/last name, delimiter auto-detected
-mini-amc-gen --bank bank.yml --copies 30 --seed 42 --students moodle.csv \
+mini-amc generate --bank bank.yml --copies 30 --seed 42 --students moodle.csv \
   --students-id-column "Numéro étudiant" --students-name-columns "Prénom,Nom" --out data
 ```
 
 ## 3. Generate the copies
 
 ```bash
-mini-amc-gen --bank bank.example.yml --copies 30 --seed 42 --out data
+mini-amc generate --bank bank.example.yml --copies 30 --seed 42 --out data
 ```
 
 Produces in `data/`: `copy_XXXX.pdf` (printable copies, seeded shuffle of questions and choices), `copy_XXXX.json`, `positions.json` (bubble/grade-box positions), `answers.json` (answer key), and `students.json` if `--students` was given. Generation is staged: on failure, `data/` is left untouched.
@@ -65,7 +65,7 @@ Put the scans in `scans/` (PNG or JPG, 150-300 dpi, page preferably upright). Th
 ## 6. OMR reading
 
 ```bash
-mini-amc-omr --scans scans --positions data/positions.json --out data/omr_results.json
+mini-amc omr --scans scans --positions data/positions.json --out data/omr_results.json
 ```
 
 Each scan gets a status: `ok` / `needs_review` (ambiguous bubbles, ungraded open question) / `unread` (unreadable). Results are aggregated per copy in `omr_results.json` (`copies` section, multi-page: `ok` / `needs_review` / `partial` / `unread`), with straightened + annotated scans in `data/annotated/`.
@@ -73,7 +73,7 @@ Each scan gets a status: `ok` / `needs_review` (ambiguous bubbles, ungraded open
 ## 7. Review (web UI)
 
 ```bash
-uv run uvicorn mini_amc.web.app:app --reload    # -> http://127.0.0.1:8000/copies
+mini-amc web --reload    # -> http://127.0.0.1:8000/copies
 ```
 
 JSON API (interactive docs at `/docs`):
@@ -86,7 +86,7 @@ JSON API (interactive docs at `/docs`):
 ## 8. Grades
 
 ```bash
-mini-amc-grades --data data
+mini-amc grades --data data
 ```
 
 Writes `data/notes.csv` (`copy_id,student,status,score,score_max`) and `data/notes_detail.csv` (`copy_id,qid,type,page,checked,correction,expected,point,needs_review`). Grading scheme v1: 1 pt per correct MCQ answer, open question = the blackened grade box value (0..max_points), no negative points; manual corrections override the OMR reading.

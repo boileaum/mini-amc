@@ -1,5 +1,12 @@
 # API
 
+## CLI
+
+```{eval-rst}
+.. automodule:: mini_amc.cli
+   :members:
+```
+
 ## Copy generation
 
 ```{eval-rst}

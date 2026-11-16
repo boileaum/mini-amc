@@ -58,8 +58,8 @@ The rollout backlog (nominative CSV link, grader-blackened free-text fields) is 
 | `data/omr_results.json` | OMR results: `scans` (per scan: status `ok` / `needs_review` / `unread`, copy_id, page, questions) + `copies` (multi-page aggregate per copy_id: status `ok` / `needs_review` / `partial` / `unread`, pages, questions with page) | `omr/read_scans.py` |
 | `data/annotated/` | Straightened and annotated scans (markers, QR, detected bubbles) | `omr/read_scans.py` |
 | `data/corrections.json` | Manual corrections from the review UI: `{copy_id: {qid: [keys]}}` | `web/app.py` (D7) |
-| `data/notes.csv` | Grade per copy: `copy_id,student,status,score,score_max` (`student` empty without `--students`) | `mini-amc-grades` (D8) |
-| `data/notes_detail.csv` | Question-by-question detail: `copy_id,qid,type,page,checked,correction,expected,point,needs_review` (`type` = `mcq`/`open`, `expected` = key or `open`) | `mini-amc-grades` (D8) |
+| `data/notes.csv` | Grade per copy: `copy_id,student,status,score,score_max` (`student` empty without `--students`) | `mini-amc grades` (D8) |
+| `data/notes_detail.csv` | Question-by-question detail: `copy_id,qid,type,page,checked,correction,expected,point,needs_review` (`type` = `mcq`/`open`, `expected` = key or `open`) | `mini-amc grades` (D8) |
 
 ## Plan in half-days
 

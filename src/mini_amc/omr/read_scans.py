@@ -17,9 +17,14 @@ MARKER_SIZE_CM = 1.2
 CORNER_CM = 0.7
 MARKER_CENTER_PT = (CORNER_CM + MARKER_SIZE_CM / 2) * CM_TO_PT
 BUBBLE_R_PT = 4.5
+# metadata sits at the top-left of the box(circle(...)); the circle center is
+# +radius in x and +3pt in y — offsets calibrated against rendered PNGs
 BUBBLE_DX_PT = BUBBLE_R_PT
 BUBBLE_DY_PT = 3.0
+# ink-density disk used to measure the fill of a bubble
 FILL_R_PT = 2.5
+# a fully blackened bubble measures ~0.75-0.95 (blur/noise included), an empty
+# one ~0.01-0.05; 0.35 separates them, 0.15 flags gray traces for needs_review
 THRESHOLD = 0.35
 GRAY_THRESHOLD = 0.15
 QR_RE = re.compile(r"copy:(\d+)\|page:(\d+)")
@@ -56,6 +61,9 @@ def detect_markers(image: np.ndarray) -> np.ndarray:
     if len(cands) < 4:
         raise ValueError(f"{len(cands)} markers found (4 required)")
     h, w = gray.shape
+    # pick the candidate closest to each expected corner (guard: 25% of the
+    # diagonal) instead of requiring exactly 4 components: text/stains can
+    # produce extra black blobs
     max_d = 0.25 * max(h, w)
     chosen = []
     for cx, cy in ((0, 0), (w, 0), (w, h), (0, h)):
@@ -100,6 +108,8 @@ def unwarp(image: np.ndarray, markers: np.ndarray, scale: float = SCALE) -> np.n
         + np.linalg.norm(markers[2] - markers[1])
     ) / 2
     if quad_w > quad_h:
+        # sideways page: the detected quad is landscape, roll the destination
+        # corners so the homography does not stretch the page anisotropically
         dst = np.roll(dst, 1, axis=0)
     M = cv2.getPerspectiveTransform(markers, dst)
     return cv2.warpPerspective(
@@ -113,6 +123,8 @@ def unwarp(image: np.ndarray, markers: np.ndarray, scale: float = SCALE) -> np.n
 def _decode_crops(img: np.ndarray, det) -> str | None:
     s = img.shape[1] / PAGE_W_PT
     h, w = img.shape[:2]
+    # the QR is printed at the top right; try generous crops first, then the
+    # whole image, each as raw / 2x-upscaled / Otsu-binarized variants
     crops = [
         img[0 : int(130 * s), int(340 * s) : min(w, int(470 * s))],
         img[0 : int(160 * s), int(300 * s) : w],
@@ -145,8 +157,8 @@ def read_qr(warped: np.ndarray) -> dict:
 
     Tries the 4 page orientations and keeps the one where the QR is
     detected at the top right (the expected position): the page may be
-    scanned sideways or upside down, and the QR detector of some OpenCV
-    builds does not localize 90°-rotated codes.
+    scanned sideways or upside down, and an upside-down QR still decodes,
+    so the geometric position is what disambiguates the rotation.
 
     Args:
         warped: Page straightened by :func:`unwarp` (any orientation).
@@ -433,9 +445,9 @@ def aggregate_copies(results: dict, positions: dict) -> dict:
     return copies
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     """
-    CLI entry point ``mini-amc-omr``.
+    Subcommand ``mini-amc omr`` (via ``mini_amc.cli``).
 
     Reads the scans from ``--scans`` and writes ``--out`` as
     ``{"scans": …, "copies": …}``, plus the annotated images in
@@ -448,7 +460,7 @@ def main() -> None:
     ap.add_argument("--annotated", type=Path, default=Path("data/annotated"))
     ap.add_argument("--threshold", type=float, default=THRESHOLD)
     ap.add_argument("--gray-threshold", type=float, default=GRAY_THRESHOLD)
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     if not args.scans.is_dir():
         ap.error(f"scans directory not found: {args.scans}")

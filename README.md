@@ -7,63 +7,68 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/boileaum/mini-amc/blob/main/LICENSE)
 [![Built with Mistral Vibe](https://img.shields.io/badge/built_with-Mistral_Vibe-FF7000?logo=mistralai)](https://mistral.ai/vibe)
 
-A mini-clone of Auto-Multiple-Choice (AMC) based on Typst: YAML question bank (MCQ + open questions graded by the teacher) → personalized PDF copies (seeded shuffle, check bubbles, per-page QR code) → scan → local OMR reading (OpenCV) → web review (FastAPI) → CSV grades. 100% local data, zero external Typst packages. Everything in English.
+A mini-clone of Auto-Multiple-Choice (AMC) based on Typst. 100% local data (student scans never leave the machine), zero external Typst packages, everything in English.
 
 Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every commit carries the `Co-Authored-By: Mistral Vibe` trailer).
 
-## Installation
+## Features
 
-### 1. uv environment (Python >= 3.12, committed `uv.lock`)
+- YAML question bank: single-answer MCQ + open (free-text) questions graded by the teacher (`type: open`, `max_points`)
+- Personalized PDF copies: seeded reproducible shuffle of questions/choices, check bubbles + grade boxes, 4 corner alignment squares + per-page QR code on every page
+- Optional nominative CSV (`--students`), Moodle-export friendly: link column and name columns configurable, delimiter auto-detected
+- 100% local OMR reading (OpenCV only): corners → homography → QR → bubbles/grade boxes, annotated scans, statuses `ok` / `needs_review` / `partial` / `unread`
+- Review web UI (FastAPI): copy list, per-question detail, annotated scans, manual corrections (MCQ keys or open-question grade values)
+- CSV grades: `notes.csv` (per copy, with student name) + `notes_detail.csv` (per question); bareme v1: 1 pt per correct MCQ, open question = blackened box value (0..max_points), no negative points
 
-```bash
-uv sync --all-groups    # creates .venv, installs the project + pinned deps + dev groups
+## Components
+
+| Command | Role | Main outputs |
+| --- | --- | --- |
+| `mini-amc generate` | bank YAML (+ students CSV) → Typst PDFs | `data/copy_XXXX.pdf`, `positions.json`, `answers.json`, `students.json` |
+| `mini-amc omr` | scans → OMR results | `data/omr_results.json`, `data/annotated/` |
+| `mini-amc web` | review UI (FastAPI) | `data/corrections.json` |
+| `mini-amc grades` | results + corrections → grades | `data/notes.csv`, `data/notes_detail.csv` |
+
+## Pipeline
+
+```mermaid
+flowchart LR
+  bank["bank.yml + students.csv"] --> gen["mini-amc generate"]
+  gen --> pdf["data/copy_XXXX.pdf"]
+  pdf --> print["print"] --> scans["scans/"]
+  scans --> omr["mini-amc omr"]
+  omr --> res["data/omr_results.json + annotated/"]
+  res --> web["mini-amc web (review UI)"]
+  web --> corr["data/corrections.json"]
+  res --> grades["mini-amc grades"]
+  corr --> grades
+  grades --> notes["data/notes.csv + notes_detail.csv"]
 ```
 
-Pinned stack in `pyproject.toml` (`==`) and frozen by `uv.lock`: opencv-python-headless 5.0.0.93,
-numpy 2.5.4, pillow 13.0.0, qrcode 8.2, PyYAML 6.0.3, fastapi 0.162.5, uvicorn 0.54.0.
+## Install
 
-### 2. Typst CLI v0.15.1 (official binary, pinned)
+Python >= 3.12 + [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv sync --all-groups    # .venv with the project + pinned deps (committed uv.lock)
+```
+
+Typst CLI pinned to v0.15.1 (official binary; per-OS archives on the [releases page](https://github.com/typst/typst/releases/tag/v0.15.1)):
 
 ```bash
 curl -L https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-unknown-linux-musl.tar.xz -o /tmp/typst.tar.xz
-tar -xf /tmp/typst.tar.xz -C /tmp
-sudo mv /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
-typst --version                   # -> typst 0.15.1
+tar -xf /tmp/typst.tar.xz -C /tmp && sudo mv /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
+typst --version    # -> typst 0.15.1   (macOS: typst-aarch64-apple-darwin.tar.xz, or brew install typst)
 ```
 
-On macOS: replace the archive with `typst-aarch64-apple-darwin.tar.xz` (Apple Silicon) or
-`typst-x86_64-apple-darwin.tar.xz` (Intel), or `brew install typst` then check `typst --version`.
-
-## Quickstart (4 commands)
+## Quickstart
 
 ```bash
-# 1. Generate the copies: data/copy_XXXX.pdf + data/positions.json + data/answers.json
-mini-amc-gen --bank bank.example.yml --copies 30 --seed 42 --out data
-# optional nominative CSV -> data/students.json + "student" column in notes.csv + student in the review UI.
-# Simple format (default columns): copy_id,name  (see students.example.csv)
-#   mini-amc-gen --bank bank.example.yml --copies 30 --seed 42 --students students.csv --out data
-# Moodle export (delimiter auto-detected, link column = student number, name from first/last name;
-# all other columns ignored, see students.moodle.example.csv):
-#   mini-amc-gen --bank bank.example.yml --copies 30 --seed 42 --students moodle.csv \
-#     --students-id-column "Numéro étudiant" --students-name-columns "Prénom,Nom" --out data
-# (equivalent: uv run python -m mini_amc.gen.generate --bank bank.example.yml ...)
-
-# 2. OMR reading of the scans placed in scans/
-mini-amc-omr --scans scans --positions data/positions.json --out data/omr_results.json
-
-# 3. Review UI for the copies to check
-uv run uvicorn mini_amc.web.app:app --reload     # -> http://127.0.0.1:8000/copies
-
-# 4. Grades: data/notes.csv (per copy) + data/notes_detail.csv (per question)
-mini-amc-grades --data data
+mini-amc generate --bank bank.example.yml --copies 30 --seed 42 --out data   # + --students students.csv (Moodle-friendly)
+# print the PDFs, run the exam, scan the copies into scans/
+mini-amc omr --scans scans --positions data/positions.json --out data/omr_results.json
+mini-amc web --reload        # review UI -> http://127.0.0.1:8000/copies (interactive docs at /docs)
+mini-amc grades --data data  # -> data/notes.csv + data/notes_detail.csv
 ```
 
-Review UI (JSON API, interactive docs at `/docs`):
-
-- `GET /copies` — all copies with their status (`ok` / `needs_review` / `partial` / `unread`), pages read vs expected, questions read vs total, manual corrections count
-- `GET /copy/{copy_id}` — detail: per question the OMR-checked keys, ink fills, `needs_review` flag, expected key, ongoing correction, plus the current score
-- `GET /copy/{copy_id}/scan/{page}` — annotated scan image of that page
-- `POST /copy/{copy_id}/correction` — body `{"qid": "q1", "checked": ["B"]}` (empty list clears); saved to `data/corrections.json`, score recomputed
-
-See `SCOPE.md` for the scope and technical decisions, and `runbook.md` for the full
-exam-day procedure (generation → printing → scan → OMR → review → grades).
+Full guide: [quickstart](https://boileaum.github.io/mini-amc/quickstart.html) · exam-day checklist: [runbook](https://boileaum.github.io/mini-amc/runbook.html) · API reference: [api](https://boileaum.github.io/mini-amc/api.html) · scope and technical decisions: `SCOPE.md` in the repo.
