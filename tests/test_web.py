@@ -264,3 +264,14 @@ def test_empty_data(tmp_path, monkeypatch):
         ).status_code
         == 404
     )
+
+
+def test_data_dir_from_env(monkeypatch, tmp_path):
+    import importlib
+
+    monkeypatch.setenv("MINI_AMC_DATA", str(tmp_path / "data"))
+    importlib.reload(web_app)
+    assert web_app.DATA == tmp_path / "data"
+    monkeypatch.delenv("MINI_AMC_DATA")
+    importlib.reload(web_app)
+    assert web_app.DATA.name == "data"

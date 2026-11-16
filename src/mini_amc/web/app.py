@@ -14,7 +14,10 @@ from mini_amc.grade.notes import question_point
 
 app = FastAPI(title="mini-amc review")
 
-DATA = Path(__file__).resolve().parents[3] / "data"
+# conventional data directory of the current project: ./data in the working
+# directory, overridable with the MINI_AMC_DATA env var (set by
+# `mini-amc web --data …`) — one common name for all exam projects
+DATA = Path(os.environ.get("MINI_AMC_DATA", Path.cwd() / "data"))
 CORRECTIONS_FILE = "corrections.json"
 
 

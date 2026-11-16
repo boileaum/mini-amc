@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pytest
 
 from mini_amc import cli
@@ -41,13 +44,15 @@ def test_web_subcommand(monkeypatch):
         seen.update(app=app, host=host, port=port, reload=reload)
 
     monkeypatch.setattr(cli.uvicorn, "run", fake_run)
-    cli.main(["web", "--port", "9999", "--reload"])
+    monkeypatch.delenv("MINI_AMC_DATA", raising=False)
+    cli.main(["web", "--port", "9999", "--reload", "--data", "/tmp/exam1/data"])
     assert seen == {
         "app": "mini_amc.web.app:app",
         "host": "127.0.0.1",
         "port": 9999,
         "reload": True,
     }
+    assert os.environ["MINI_AMC_DATA"] == str(Path("/tmp/exam1/data").resolve())
 
 
 def test_unknown_command_errors():

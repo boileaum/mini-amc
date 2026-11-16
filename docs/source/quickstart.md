@@ -50,12 +50,26 @@ mini-amc generate --bank bank.yml --copies 30 --seed 42 --students moodle.csv \
 mini-amc generate --bank bank.example.yml --copies 30 --seed 42 --out data
 ```
 
-Produces in `data/`: `copy_XXXX.pdf` (printable copies, seeded shuffle of questions and choices), `copy_XXXX.json`, `positions.json` (bubble/grade-box positions), `answers.json` (answer key), and `students.json` if `--students` was given. Generation is staged: on failure, `data/` is left untouched.
+Produces in `data/`:
+
+- `copy_XXXX.pdf`: printable copies, seeded shuffle of questions and choices,
+- `copy_XXXX.json`, `positions.json`: bubble/grade-box positions,
+- `answers.json`: answer key
+- `students.json` if `--students` was given.
+
+Generation is staged: on failure, `data/` is left untouched.
 
 ## 4. Print and run the exam
 
-- Print single-sided, **no "fit to page" scaling** (it distorts the geometry).
+- Print with **no "fit to page" scaling** (it distorts the geometry).
 - Check on a test copy: the 4 black corner squares and the QR code (top right) are well printed.
+
+```{note}
+Single-sided printing is recommended, not required: ink from the reverse
+side can show through in the scan and skew the bubble fill measurement —
+but a doubtful reading is only flagged `needs_review` for manual review,
+never silently misread.
+```
 - Students check ONE box per MCQ; open questions are left blank during the exam.
 - After the exam, **before scanning**: the teacher blackens ONE grade box per open question on each paper copy (boxes `0..max_points`, each box = a fraction of the max score).
 
@@ -74,7 +88,9 @@ Each scan gets a status: `ok` / `needs_review` (ambiguous bubbles, ungraded open
 ## 7. Review (web UI)
 
 ```bash
-mini-amc web --reload    # -> http://127.0.0.1:8000/copies
+mini-amc web --reload    # -> http://127.0.0.1:8000/copies (reads ./data; override with --data DIR)
+
+All commands work on the conventional `data/` directory of the current project — one common name for all exams, no per-file paths to manage (`generate`/`grades` accept `--data`/`--out`, `omr` defaults to `data/…`, `web` reads `./data` or `$MINI_AMC_DATA`).
 ```
 
 JSON API (interactive docs at `/docs`):

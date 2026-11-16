@@ -18,7 +18,7 @@
 
 ## Printing
 
-- [ ] print the N copies (single-sided; one copy = 1 or more pages depending on the number of questions)
+- [ ] print the N copies (single-sided recommended but not mandatory — see the note in the quickstart; one copy = 1 or more pages depending on the number of questions)
 - [ ] check on a test copy: corner squares well printed, QR sharp, bubbles not masked
 
 ## Exam

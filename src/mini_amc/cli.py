@@ -1,7 +1,9 @@
 """Single CLI entry point ``mini-amc`` with subcommands (argparse, no dependency)."""
 
 import argparse
+import os
 import sys
+from pathlib import Path
 
 import uvicorn
 
@@ -28,7 +30,14 @@ def _web(rest: list[str]) -> None:
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--reload", action="store_true")
+    ap.add_argument(
+        "--data",
+        type=Path,
+        default=Path("data"),
+        help="project data dir (default: ./data; also via MINI_AMC_DATA)",
+    )
     args = ap.parse_args(rest)
+    os.environ["MINI_AMC_DATA"] = str(args.data.resolve())
     uvicorn.run(
         "mini_amc.web.app:app",
         host=args.host,
