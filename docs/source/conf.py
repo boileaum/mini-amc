@@ -23,11 +23,17 @@ extensions = [
 myst_enable_checkboxes = True
 myst_fence_as_directive = ["mermaid"]
 
-# larger nodes/spacing so the pipeline diagram stays readable in the docs
+# larger nodes/spacing so the pipeline diagram stays readable in the docs;
+# useMaxWidth=False stops mermaid from shrinking the SVG to the container
+# width (that is what made the diagram tiny)
 mermaid_init_config = {
     "startOnLoad": False,
-    "themeVariables": {"fontSize": "20px"},
-    "flowchart": {"nodeSpacing": 70, "rankSpacing": 70},
+    "themeVariables": {"fontSize": "26px"},
+    "flowchart": {
+        "nodeSpacing": 90,
+        "rankSpacing": 90,
+        "useMaxWidth": False,
+    },
 }
 
 templates_path = ["_templates"]
