@@ -30,7 +30,7 @@
 
 ## Manual grading (on paper, before scanning)
 
-- [ ] for each open question of each copy, blacken ONE grade box (`0..max_points`): each box is a fraction of the max score
+- [ ] for each open question of each copy, blacken ONE lettered grade box in the gray grader area (A = 0 pt, B = 1 pt, … up to `max_points`)
 - [ ] an open question left ungraded will show `needs_review` after the OMR (still correctable in the review UI)
 
 ## Scanning

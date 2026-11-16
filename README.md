@@ -12,7 +12,7 @@ A mini-clone of Auto-Multiple-Choice (AMC) based on [Typst](https://typst.app). 
 ## Features
 
 - **Everything is 100% local**: exam papers, student scans and grades never leave your machine — no cloud, no account, no upload
-- **Write the exam once** as a YAML question bank: single-answer MCQ + open questions you grade on the paper copy (blacken one box = a fraction of the max score)
+- **Write the exam once** as a YAML question bank: single-answer MCQ + open questions you grade on the paper copy (blacken one lettered box in the gray grader area = a fraction of the max score)
 - **Print one personalized PDF copy per student** (questions and choices shuffled differently on each copy)
 - **Scan the returned copies**: answers are **read automatically (OMR)**, doubtful or ambiguous cases are flagged for review
 - **Review doubtful copies** in a local web UI and correct them there, with the annotated scan next to the detected answers (also overrides a misread grade box)

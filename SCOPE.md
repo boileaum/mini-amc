@@ -8,7 +8,7 @@ The whole project is in English: code, docstrings, comments, documentation, CLI 
 Included:
 
 - Single-answer MCQ.
-- Open (free-text) questions graded by the teacher on the paper copy, before scanning: the copy shows a free area + grade boxes `0..max_points` (each box = a fraction of the max); the OMR reads the blackened box and the score is its value; ungraded (no box) → `needs_review`, still correctable in the review UI.
+- Open (free-text) questions graded by the teacher on the paper copy, before scanning: the copy shows a free area + a gray grader area with lettered grade boxes A, B, … (box value = letter index, 0..max_points); the OMR reads the blackened box and the score is its value; ungraded (no box) → `needs_review`, still correctable in the review UI.
 - v1 grading scheme: 1 point per correct MCQ answer, 0 otherwise, no negative points; open questions score 0..max_points.
 - Personalized PDF copy generation (question and choice shuffling, seeded and reproducible).
 - Self-contained Typst template: bubbles to check directly under each question, 4 black alignment squares in the corners of every page, 1 QR code at the top right of every page.

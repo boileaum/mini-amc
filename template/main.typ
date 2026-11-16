@@ -52,13 +52,18 @@
     #if q.at("type", default: "mcq") == "open" [
       #block(width: 100%, height: 3cm, stroke: 0.5pt)
       #v(0.2cm)
-      #text(9pt)[Grade:]
-      #for v in range(0, q.max_points + 1) [
-        #context [#metadata((kind: "gradebox", copy: copy.copy_id, qid: q.id, value: v, page: here().page(), x: here().position().x, y: here().position().y))]
-        #box(circle(radius: 4.5pt, stroke: 1pt))
-        #h(0.3em)
-        #v
-        #h(0.8em)
+      // grader area, AMC-style: gray background so the grade boxes are
+      // visually distinct from the student bubbles; letter labels (A, B, …)
+      // instead of numbers so they don't suggest a scale — the numeric value
+      // stays in the #metadata, which is what the OMR reads
+      #box(fill: luma(235), inset: 0.3em)[
+        #for v in range(0, q.max_points + 1) [
+          #context [#metadata((kind: "gradebox", copy: copy.copy_id, qid: q.id, value: v, page: here().page(), x: here().position().x, y: here().position().y))]
+          #box(circle(radius: 4.5pt, stroke: 1pt))
+          #h(0.3em)
+          #"ABCDEFGHIJKLMNOPQRSTUVWXYZ".at(v)
+          #h(0.8em)
+        ]
       ]
     ] else [
       #for c in q.choices [

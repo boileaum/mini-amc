@@ -75,7 +75,7 @@ Produces in `data/`:
 
 Generation is staged: on failure, `data/` is left untouched.
 
-Preview of the example copy (`bank.example.yml`, `students.example.csv`, copy `0001` « Alice Martin », seed 42 — corner squares, per-page QR code top right, student name in the header, MCQ bubbles, open-question grade boxes):
+Preview of the example copy (`bank.example.yml`, `students.example.csv`, copy `0001` « Alice Martin », seed 42 — corner squares, per-page QR code top right, student name in the header, MCQ bubbles, gray grader area with lettered grade boxes A/B/C for the open question):
 
 ```{figure} _static/copy.example.png
 :alt: Example exam copy page generated from bank.example.yml with a fictitious student name
@@ -95,7 +95,7 @@ but a doubtful reading is only flagged `needs_review` for manual review,
 never silently misread.
 ```
 - Students check ONE box per MCQ; open questions are left blank during the exam.
-- After the exam, **before scanning**: the teacher blackens ONE grade box per open question on each paper copy (boxes `0..max_points`, each box = a fraction of the max score).
+- After the exam, **before scanning**: the teacher blackens ONE lettered grade box per open question in the gray grader area (A = 0 pt, B = 1 pt, … up to `max_points`).
 
 ## 5. Scan the copies
 
