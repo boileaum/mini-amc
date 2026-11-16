@@ -143,6 +143,7 @@ def test_write_csvs(data_dir):
         "copy_id": "0001",
         "student": "Alice Example",
         "status": "needs_review",
+        "bareme": "v1",
         "score": "5",
         "score_max": "5",
     }
@@ -181,3 +182,48 @@ def test_question_point_open():
     assert question_point([], None, "open", None) == 0
     assert question_point([0, 1], None, "open", 2) == 0
     assert question_point(["A"], None, "A", None) == 1
+
+
+def test_bareme_schemes():
+    from mini_amc.grade.notes import BAREMES
+
+    assert set(BAREMES) == {"v1", "amc"}
+    # v1: exact set
+    assert question_point(["A", "B"], None, ["A", "B"], scheme="v1") == 1
+    assert question_point(["A"], None, ["A", "B"], scheme="v1") == 0
+    # amc: +1 good, -1 wrong, floored at 0
+    assert question_point(["A", "B"], None, ["A", "B"], scheme="amc") == 2
+    assert question_point(["A", "C"], None, ["A", "B"], scheme="amc") == 0
+    assert question_point(["C"], None, ["A"], scheme="amc") == 0
+    assert question_point(["A"], None, ["A"], scheme="amc") == 1
+    with pytest.raises(ValueError, match="unknown bareme"):
+        question_point(["A"], None, ["A"], scheme="nope")
+
+
+def test_load_bareme_config(tmp_path):
+    from mini_amc.grade.notes import load_bareme
+
+    assert load_bareme(tmp_path) == "v1"
+    (tmp_path / "config.json").write_text('{"bareme": "amc"}', encoding="utf-8")
+    assert load_bareme(tmp_path) == "amc"
+    (tmp_path / "config.json").write_text('{"bareme": "nope"}', encoding="utf-8")
+    with pytest.raises(ValueError, match="unknown bareme"):
+        load_bareme(tmp_path)
+
+
+def test_grades_bareme_column_and_flag(data_dir, monkeypatch):
+    (data_dir / "config.json").write_text('{"bareme": "amc"}', encoding="utf-8")
+    notes, detail = compute_grades(data_dir)
+    assert all(n["bareme"] == "amc" for n in notes)
+    notes_path, _ = write_csvs(data_dir, notes, detail)
+    with notes_path.open(encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    assert rows[0]["bareme"] == "amc"
+    # CLI flag overrides the config
+    monkeypatch.setattr(
+        "sys.argv", ["mini-amc-grades", "--data", str(data_dir), "--bareme", "v1"]
+    )
+    main()
+    with notes_path.open(encoding="utf-8", newline="") as f:
+        rows = list(csv.DictReader(f))
+    assert rows[0]["bareme"] == "v1"

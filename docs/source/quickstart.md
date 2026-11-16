@@ -130,6 +130,6 @@ JSON API (interactive docs at `/docs`):
 mini-amc grades
 ```
 
-Writes `data/notes.csv` (`copy_id,student,status,score,score_max`) and `data/notes_detail.csv` (`copy_id,qid,type,page,checked,correction,expected,point,needs_review`). Grading scheme v1: 1 pt per correct MCQ answer, open question = the blackened grade box value (0..max_points), no negative points; manual corrections override the OMR reading.
+The grading scheme is chosen per exam in `data/config.json` (`{"bareme": "v1"}` written by `generate`; edit it or pass `--bareme amc` to `grades`/`web`). Known schemes: `v1` (exact set = 1 pt), `amc` (+1 per correct checked, −1 per wrong, floored at 0). Writes `data/notes.csv` (`copy_id,student,status,bareme,score,score_max`) and `data/notes_detail.csv` (`copy_id,qid,type,page,checked,correction,expected,point,needs_review`). Grading scheme v1: 1 pt per correct MCQ answer, open question = the blackened grade box value (0..max_points), no negative points; manual corrections override the OMR reading.
 
 See the [runbook](runbook.md) for the full exam-day checklist and failure procedures, and the [API](api.md) reference.

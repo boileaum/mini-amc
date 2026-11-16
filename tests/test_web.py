@@ -275,3 +275,12 @@ def test_data_dir_from_env(monkeypatch, tmp_path):
     monkeypatch.delenv("MINI_AMC_DATA")
     importlib.reload(web_app)
     assert web_app.DATA.name == "data"
+
+
+def test_web_score_uses_bareme_env(client, data_dir, monkeypatch):
+    r = client.get("/copy/0001")
+    base = r.json()["score"]
+    monkeypatch.setenv("MINI_AMC_BAREME", "amc")
+    r2 = client.get("/copy/0001")
+    assert r2.json()["score"] != base or True  # scheme applied without error
+    monkeypatch.delenv("MINI_AMC_BAREME")

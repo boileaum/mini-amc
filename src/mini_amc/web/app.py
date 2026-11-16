@@ -10,7 +10,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from mini_amc.grade.notes import question_point
+from mini_amc.grade.notes import load_bareme, question_point
 
 app = FastAPI(title="mini-amc review")
 
@@ -110,9 +110,15 @@ def _copy_status(copy_id: str, positions: dict, omr_copies: dict) -> dict:
 
 
 def _score(questions: list[dict], answers: dict) -> int:
+    # MINI_AMC_BAREME (set by `mini-amc web --bareme`) overrides data/config.json
+    scheme = os.environ.get("MINI_AMC_BAREME") or load_bareme(DATA)
     return sum(
         question_point(
-            q["checked"], q["correction"], answers.get(q["qid"]), q.get("max_points")
+            q["checked"],
+            q["correction"],
+            answers.get(q["qid"]),
+            q.get("max_points"),
+            scheme,
         )
         for q in questions
     )

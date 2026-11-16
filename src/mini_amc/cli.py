@@ -7,6 +7,8 @@ from pathlib import Path
 
 import uvicorn
 
+from mini_amc.grade.notes import BAREMES
+
 _COMMANDS = {
     "init": (
         "mini_amc.scaffold",
@@ -40,8 +42,16 @@ def _web(rest: list[str]) -> None:
         default=Path("data"),
         help="project data dir (default: ./data; also via MINI_AMC_DATA)",
     )
+    ap.add_argument(
+        "--bareme",
+        choices=sorted(BAREMES),
+        default=None,
+        help="grading scheme for the live score (default: data/config.json)",
+    )
     args = ap.parse_args(rest)
     os.environ["MINI_AMC_DATA"] = str(args.data.resolve())
+    if args.bareme:
+        os.environ["MINI_AMC_BAREME"] = args.bareme
     uvicorn.run(
         "mini_amc.web.app:app",
         host=args.host,

@@ -112,6 +112,8 @@ def test_main_end_to_end(tmp_path, monkeypatch):
     answers = json.loads((tmp_path / "answers.json").read_text())
     assert set(positions) == {"0001", "0002"}
     assert set(answers) == {"0001", "0002"}
+    config = json.loads((tmp_path / "config.json").read_text(encoding="utf-8"))
+    assert config == {"bareme": "v1"}
     for cid, ans in answers.items():
         assert set(ans) == {"q1", "q2", "q3", "q4", "q5"}
         assert ans["q5"] == "open"

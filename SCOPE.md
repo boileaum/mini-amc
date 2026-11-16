@@ -9,7 +9,7 @@ Included:
 
 - MCQ, single-answer (circle bubbles) or multi-answer (square bubbles, several `correct: true` choices): 1 pt iff the checked set equals the expected set.
 - Open (free-text) questions graded by the teacher on the paper copy, before scanning: the copy shows a free area + a gray grader area with lettered grade boxes A, B, … (box value = letter index, 0..max_points); the OMR reads the blackened box and the score is its value; ungraded (no box) → `needs_review`, still correctable in the review UI.
-- v1 grading scheme: 1 point per correct MCQ answer, 0 otherwise, no negative points; open questions score 0..max_points.
+- Named grading schemes (``BAREMES`` in `grade/notes.py`), chosen per exam in ``data/config.json`` (written by `generate`, default ``v1``), overridable with ``--bareme`` on `grades`/`web`: ``v1`` = 1 pt iff the checked set equals the expected set, else 0; ``amc`` = +1 per correct checked, -1 per wrong checked, floored at 0 per question. Open questions score their box value (0..max_points) under all schemes. ``notes.csv`` has a ``bareme`` column.
 - Personalized PDF copy generation (question and choice shuffling, seeded and reproducible).
 - Self-contained Typst template: bubbles to check directly under each question, 4 black alignment squares in the corners of every page, 1 QR code at the top right of every page.
 - 100% local OMR reading of scans (OpenCV): corners → homography → QR → bubbles.
@@ -19,7 +19,7 @@ Included:
 
 Out of scope for v1:
 
-- Advanced grading schemes beyond the named ones (negative points, per-question schemes, custom formulas).
+- Custom grading formulas (per-question expressions à la AMC).
 - Moodle / LMS export (the import direction is covered by the flexible `--students` CSV).
 - Email sending.
 - Rich UI.

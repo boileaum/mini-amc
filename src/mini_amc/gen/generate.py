@@ -14,6 +14,8 @@ from pathlib import Path
 import qrcode
 import yaml
 
+from mini_amc.grade.notes import DEFAULT_BAREME
+
 MAX_PAGES = 64
 # copy ids end up in file names and QR contents: keep them path/QR safe
 COPY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -434,6 +436,9 @@ def main(argv: list[str] | None = None) -> None:
         answers = {c["copy_id"]: c["answers"] for c in copies}
         (stage / "answers.json").write_text(
             json.dumps(answers, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        (stage / "config.json").write_text(
+            json.dumps({"bareme": DEFAULT_BAREME}, indent=2), encoding="utf-8"
         )
         if (args.out / "build").exists():
             shutil.rmtree(args.out / "build")

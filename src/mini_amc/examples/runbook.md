@@ -53,7 +53,7 @@
 
 ## Grades
 
-- [ ] `mini-amc grades` (bareme v1: 1 pt per correct answer, manual corrections override the OMR reading)
+- [ ] `mini-amc grades` (scheme from `data/config.json`, override with `--bareme v1|amc`; manual corrections override the OMR reading)
 - [ ] export check: `data/notes.csv` (one row per copy: `copy_id,student,status,score,score_max`) and `data/notes_detail.csv` (one row per copy/question: `copy_id,qid,type,page,checked,correction,expected,point,needs_review`)
 - [ ] local archiving: `data/` and `scans/` stay on the machine, never in the cloud
 
