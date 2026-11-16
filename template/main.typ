@@ -71,7 +71,9 @@
           #context [#metadata((kind: "bubble", copy: copy.copy_id, qid: q.id, key: c.key, page: here().page(), x: here().position().x, y: here().position().y))]
           #box(circle(radius: 4.5pt, stroke: 1pt))
           #h(0.4em)
-          #c.key - #c.text
+          // no letter printed on the student copy: the key stays in the
+          // #metadata (OMR) and in copy_XXXX.json / answers.json
+          #c.text
         ]
       ]
     ]
