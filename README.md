@@ -7,9 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/boileaum/mini-amc/blob/main/LICENSE)
 [![Built with Mistral Vibe](https://img.shields.io/badge/built_with-Mistral_Vibe-FF7000?logo=mistralai)](https://mistral.ai/vibe)
 
-A mini-clone of Auto-Multiple-Choice (AMC) based on [Typst](https://typst.app). 100% local data (student scans never leave the machine), zero external Typst packages, everything in English.
-
-Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every commit carries the `Co-Authored-By: Mistral Vibe` trailer).
+A mini-clone of Auto-Multiple-Choice (AMC) based on [Typst](https://typst.app). 100% local data (student scans never leave the machine), zero external Typst packages.
 
 ## Features
 
@@ -17,7 +15,7 @@ Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every com
 - Write the exam once as a YAML question bank: single-answer MCQ + open questions you grade yourself
 - Print one personalized PDF copy per student (questions and choices shuffled differently on each copy)
 - Scan the returned copies: answers are read automatically (OMR), doubtful or ambiguous cases are flagged for review
-- Review and manually correct any copy in a local web UI, with the annotated scan next to the detected answers
+- Review doubtful copies and grade the open questions manually in a local web UI, with the annotated scan next to the detected answers
 - Export the grades as CSV (per copy with the student name, and per question), ready to import into your gradebook — Moodle-export friendly
 
 ## Components
@@ -47,35 +45,14 @@ flowchart TD
   omr --> res["data/omr_results.json + annotated/"]:::data
   res --> web("mini-amc web (review UI)"):::tool
   res --> grades("mini-amc grades"):::tool
-  web --> corr["data/corrections.json"]:::data
+  web --> manual(["Manual grading<br/>of open questions"]):::exam
+  manual --> corr["data/corrections.json"]:::data
   corr --> grades
   grades --> notes["data/notes.csv + notes_detail.csv"]:::data
 ```
 
-## Install
-
-Python >= 3.12 + [uv](https://docs.astral.sh/uv/):
-
-```bash
-uv sync --all-groups    # .venv with the project + pinned deps (committed uv.lock)
-```
-
-Typst CLI pinned to v0.15.1 (official binary; per-OS archives on the [releases page](https://github.com/typst/typst/releases/tag/v0.15.1)):
-
-```bash
-curl -L https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-unknown-linux-musl.tar.xz -o /tmp/typst.tar.xz
-tar -xf /tmp/typst.tar.xz -C /tmp && sudo mv /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
-typst --version    # -> typst 0.15.1   (macOS: typst-aarch64-apple-darwin.tar.xz, or brew install typst)
-```
-
-## Quickstart
-
-```bash
-mini-amc generate --bank bank.example.yml --copies 30 --seed 42 --out data   # + --students students.csv (Moodle-friendly)
-# print the PDFs, run the exam, scan the copies into scans/
-mini-amc omr --scans scans --positions data/positions.json --out data/omr_results.json
-mini-amc web --reload        # review UI -> http://127.0.0.1:8000/copies (interactive docs at /docs)
-mini-amc grades --data data  # -> data/notes.csv + data/notes_detail.csv
-```
-
 Full guide: [quickstart](https://boileaum.github.io/mini-amc/quickstart.html) · exam-day checklist: [runbook](https://boileaum.github.io/mini-amc/runbook.html) · API reference: [api](https://boileaum.github.io/mini-amc/api.html) · scope and technical decisions: `SCOPE.md` in the repo.
+
+---
+
+Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every commit carries the `Co-Authored-By: Mistral Vibe` trailer).
