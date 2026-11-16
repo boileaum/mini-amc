@@ -21,10 +21,12 @@ extensions = [
 myst_enable_extensions = ["tasklist"]
 myst_fence_as_directive = ["mermaid"]
 
-# Mermaid sizing: the extension's default CSS stretches every SVG to the full
-# column width (width:100%) inside a 500px-high box — natural-size control via
-# fontSize was impossible. Let the SVG keep its natural size (see custom.css)
-# and enable pan/zoom on the diagram.
+# Mermaid sizing, via the extension's own knobs (its inline <style> comes after
+# html_css_files in the <head>, so custom.css cannot override it — use
+# mermaid_width/mermaid_height instead): the defaults stretched every diagram
+# to the full column (width 100%) in a 500px box, i.e. ~2.5x too zoomed.
+# Render at 40% of the column, natural height, with pan/zoom.
+mermaid_width = "40%"
 mermaid_height = "auto"
 mermaid_d3_zoom = True
 

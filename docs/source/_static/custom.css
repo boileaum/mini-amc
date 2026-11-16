@@ -1,17 +1,3 @@
-/* Mermaid diagrams: the extension's own CSS forces svg { width: 100%;
-   height: 500px } on the full column, which made diagrams ~2.5x too zoomed.
-   Render the diagram at 40% of the column width instead (height follows the
-   aspect ratio), still capped to the column. */
-pre.mermaid {
-  width: 40%;
-  min-width: 300px;
-}
-pre.mermaid > svg {
-  width: 100% !important;
-  height: auto !important;
-  max-width: 100% !important;
-}
-
 /* task lists (runbook checkboxes): no bullet, checkbox aligned with text */
 ul.contains-task-list {
   list-style: none;
