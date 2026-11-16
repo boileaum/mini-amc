@@ -33,16 +33,29 @@ Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every com
 
 ```mermaid
 flowchart TD
-  bank["bank.yml + students.csv"] --> gen["mini-amc generate"]
-  gen --> pdf["data/copy_XXXX.pdf"]
-  pdf --> print["print"] --> scans["scans/"]
-  scans --> omr["mini-amc omr"]
-  omr --> res["data/omr_results.json + annotated/"]
-  res --> web["mini-amc web (review UI)"]
-  web --> corr["data/corrections.json"]
-  res --> grades["mini-amc grades"]
+  classDef exam fill:#fff3cd,stroke:#b8860b,stroke-width:2px
+  classDef tool fill:#d4edda,stroke:#2e7d32,stroke-width:2px
+  classDef data fill:#d1ecf1,stroke:#0c5460
+
+  exam["Exam<br/>bank.yml + students.csv"]:::exam
+  exam --> gen["mini-amc generate"]:::tool
+  gen --> pdf["data/copy_XXXX.pdf"]:::data
+  pdf --> print["Print"]:::tool
+  print --> scans["scans/"]:::data
+  scans --> omr["mini-amc omr"]:::tool
+  omr --> res["data/omr_results.json + annotated/"]:::data
+  res --> web["mini-amc web (review UI)"]:::tool
+  res --> grades["mini-amc grades"]:::tool
+  web --> corr["data/corrections.json"]:::data
   corr --> grades
-  grades --> notes["data/notes.csv + notes_detail.csv"]
+  grades --> notes["data/notes.csv + notes_detail.csv"]:::data
+
+  subgraph legend["Legend"]
+    direction LR
+    lt["command"]:::tool
+    ld["data file"]:::data
+    le["exam"]:::exam
+  end
 ```
 
 ## Install
