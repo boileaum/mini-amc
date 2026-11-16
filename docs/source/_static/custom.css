@@ -1,0 +1,12 @@
+/* task lists (runbook checkboxes): no bullet, checkbox aligned with text */
+ul.contains-task-list {
+  list-style: none;
+  padding-left: 0.5em;
+}
+ul.contains-task-list li.task-list-item {
+  list-style: none;
+}
+input.task-list-item-checkbox {
+  margin: 0 0.45em 0 0;
+  vertical-align: -0.1em;
+}
