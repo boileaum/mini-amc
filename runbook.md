@@ -23,8 +23,13 @@
 
 ## Exam
 
-- [ ] instructions: check ONE single box per MCQ question; open (free-text) questions are left blank, the grader blackens one grade box (0..max) at review time
+- [ ] instructions: check ONE single box per MCQ question; open (free-text) questions are left blank during the exam
 - [ ] collect the sheets
+
+## Manual grading (on paper, before scanning)
+
+- [ ] for each open question of each copy, blacken ONE grade box (`0..max_points`): each box is a fraction of the max score
+- [ ] an open question left ungraded will show `needs_review` after the OMR (still correctable in the review UI)
 
 ## Scanning
 
@@ -41,7 +46,7 @@
 
 - [ ] `mini-amc web --reload` → http://127.0.0.1:8000/copies
 - [ ] go through the `needs_review` / `partial` / `unread` copies one by one (annotated scan + detected choices)
-- [ ] grade the open questions: blacken one grade box per open question (the detected box is pre-read by the OMR; `POST /copy/{id}/correction` with `{"qid": ..., "checked": [value]}` overrides it)
+- [ ] correct the doubtful answers: `POST /copy/{id}/correction` with `{"qid": ..., "checked": ["B"]}` for an MCQ, `{"qid": ..., "checked": [value]}` to override a misread/ungraded open-question grade box (empty list clears)
 - [ ] save the manual corrections; the score is recomputed on each correction (MCQ: 1 pt; open: the box value)
 
 ## Grades

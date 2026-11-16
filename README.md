@@ -12,10 +12,10 @@ A mini-clone of Auto-Multiple-Choice (AMC) based on [Typst](https://typst.app). 
 ## Features
 
 - **Everything is 100% local**: exam papers, student scans and grades never leave your machine — no cloud, no account, no upload
-- Write the exam once as a YAML question bank: single-answer MCQ + open questions you grade yourself
+- Write the exam once as a YAML question bank: single-answer MCQ + open questions you grade on the paper copy (blacken one box = a fraction of the max score)
 - Print one personalized PDF copy per student (questions and choices shuffled differently on each copy)
 - Scan the returned copies: answers are read automatically (OMR), doubtful or ambiguous cases are flagged for review
-- Review doubtful copies and grade the open questions manually in a local web UI, with the annotated scan next to the detected answers
+- Review doubtful copies in a local web UI and correct them there, with the annotated scan next to the detected answers (also overrides a misread grade box)
 - Export the grades as CSV (per copy with the student name, and per question), ready to import into your gradebook — Moodle-export friendly
 
 ## Components
@@ -40,13 +40,13 @@ flowchart TD
   gen --> pdf["data/copy_XXXX.pdf"]:::data
   pdf --> print("Print"):::tool
   print --> exam(["EXAM<br/>students answer on paper"]):::exam
-  exam --> scans["scans/"]:::data
+  exam --> manual(["Manual grading on paper<br/>blacken one grade box (0..max) per open question"]):::exam
+  manual --> scans["scans/"]:::data
   scans --> omr("mini-amc omr"):::tool
   omr --> res["data/omr_results.json + annotated/"]:::data
   res --> web("mini-amc web (review UI)"):::tool
   res --> grades("mini-amc grades"):::tool
-  web --> manual(["Manual grading<br/>of open questions"]):::exam
-  manual --> corr["data/corrections.json"]:::data
+  web --> corr["data/corrections.json"]:::data
   corr --> grades
   grades --> notes["data/notes.csv + notes_detail.csv"]:::data
 ```

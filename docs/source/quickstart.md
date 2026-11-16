@@ -56,7 +56,8 @@ Produces in `data/`: `copy_XXXX.pdf` (printable copies, seeded shuffle of questi
 
 - Print single-sided, **no "fit to page" scaling** (it distorts the geometry).
 - Check on a test copy: the 4 black corner squares and the QR code (top right) are well printed.
-- Students check ONE box per MCQ. Open questions are graded later by the teacher.
+- Students check ONE box per MCQ; open questions are left blank during the exam.
+- After the exam, **before scanning**: the teacher blackens ONE grade box per open question on each paper copy (boxes `0..max_points`, each box = a fraction of the max score).
 
 ## 5. Scan the copies
 
@@ -81,7 +82,7 @@ JSON API (interactive docs at `/docs`):
 - `GET /copies` — all copies with status, pages/questions read, corrections count, student name
 - `GET /copy/{copy_id}` — per question: detected choices (`checked`, `fills`, `needs_review`), expected answer, ongoing correction, current score
 - `GET /copy/{copy_id}/scan/{page}` — annotated scan image of the page
-- `POST /copy/{copy_id}/correction` — `{"qid": "q1", "checked": ["B"]}` for an MCQ, `{"qid": "q5", "checked": [2]}` for an open question (empty list clears); saved to `data/corrections.json`, score recomputed
+- `POST /copy/{copy_id}/correction` — `{"qid": "q1", "checked": ["B"]}` for an MCQ, `{"qid": "q5", "checked": [2]}` to override a misread grade box of an open question (empty list clears); saved to `data/corrections.json`, score recomputed. Open questions are normally graded on paper before scanning; an ungraded one shows `needs_review`.
 
 ## 8. Grades
 
