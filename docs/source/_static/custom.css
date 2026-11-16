@@ -1,3 +1,11 @@
+/* Mermaid diagrams are narrower than the column (mermaid_width): center them.
+   (margin only — the extension's inline style sets width, not margins, so no
+   cascade conflict here) */
+pre.mermaid {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* task lists (runbook checkboxes): no bullet, checkbox aligned with text */
 ul.contains-task-list {
   list-style: none;
