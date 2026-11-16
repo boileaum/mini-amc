@@ -1,3 +1,16 @@
+/* Mermaid diagrams: render at natural size (driven by the mermaid fontSize),
+   only capped to the column width. The extension's own CSS forces
+   svg { width: 100%; height: 500px }, which stretched every diagram to the
+   full column and made the font size ineffective. */
+pre.mermaid {
+  width: auto;
+}
+pre.mermaid > svg {
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+}
+
 /* task lists (runbook checkboxes): no bullet, checkbox aligned with text */
 ul.contains-task-list {
   list-style: none;

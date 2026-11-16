@@ -21,14 +21,12 @@ extensions = [
 myst_enable_extensions = ["tasklist"]
 myst_fence_as_directive = ["mermaid"]
 
-# the pipeline diagram is tall: the extension's default CSS forces the SVG into
-# a 500px-high box (mermaid_height), which shrinks it to unreadable — let the
-# SVG keep its natural height, and enable pan/zoom on the big diagram
+# Mermaid sizing: the extension's default CSS stretches every SVG to the full
+# column width (width:100%) inside a 500px-high box — natural-size control via
+# fontSize was impossible. Let the SVG keep its natural size (see custom.css)
+# and enable pan/zoom on the diagram.
 mermaid_height = "auto"
 mermaid_d3_zoom = True
-mermaid_init_config = {
-    "themeVariables": {"fontSize": "24px"},
-}
 
 templates_path = ["_templates"]
 # _autosummary (autosummary stubs) must stay readable: it is only gitignored
