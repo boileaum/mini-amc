@@ -36,7 +36,7 @@ N_COPIES = 30
 N_QUESTIONS = 40
 N_OPEN = 2
 SEED = 7
-TEMPLATE = Path("template")
+TEMPLATE = Path("src/mini_amc/template")
 SCORE_MAX = (N_QUESTIONS - N_OPEN) * 1 + 2 + 3
 
 

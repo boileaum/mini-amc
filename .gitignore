@@ -3,8 +3,8 @@ scans/
 __pycache__/
 *.pyc
 .venv/
-template/copy.json
-template/qr-*.png
+src/mini_amc/template/copy.json
+src/mini_amc/template/qr-*.png
 .ruff_cache/
 .ty/
 .pytest_cache/
@@ -17,4 +17,5 @@ docs/source/_build/
 docs/source/_autosummary/
 /public/
 NOTES.md
-template/main.pdf
+src/mini_amc/template/main.pdf
+preview/

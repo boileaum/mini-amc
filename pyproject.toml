@@ -46,7 +46,7 @@ where = ["src"]
 namespaces = false
 
 [tool.setuptools.package-data]
-mini_amc = ["examples/*"]
+mini_amc = ["examples/*", "template/*"]
 
 [tool.setuptools.dynamic.version]
 attr = "mini_amc.__version__"

@@ -14,7 +14,7 @@ from mini_amc.gen.generate import (
 )
 
 BANK = Path("src/mini_amc/examples/bank.example.yml")
-TEMPLATE = Path("template")
+TEMPLATE = Path("src/mini_amc/template")
 
 
 def test_plan_copies_reproducible():

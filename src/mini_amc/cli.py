@@ -14,6 +14,10 @@ _COMMANDS = {
         "mini_amc.scaffold",
         "Create an exam project dir with the example files (bank, CSVs, runbook)",
     ),
+    "preview": (
+        "mini_amc.preview",
+        "Render one copy to check the layout (./preview, --png, --watch)",
+    ),
     "generate": (
         "mini_amc.gen.generate",
         "Generate the exam copies (Typst PDFs, positions, answers)",

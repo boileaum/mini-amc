@@ -14,7 +14,7 @@ N_QUESTIONS = 40
 
 
 def _build_copy(dir_path: Path) -> None:
-    shutil.copy(Path("template/main.typ"), dir_path / "main.typ")
+    shutil.copy(Path("src/mini_amc/template/main.typ"), dir_path / "main.typ")
     questions: list[dict] = [
         {
             "id": f"q{i}",

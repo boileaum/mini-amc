@@ -62,6 +62,17 @@ mini-amc generate --bank bank.yml --copies 30 --seed 42 --students moodle.csv \
 
 ## 3. Generate the copies
 
+While writing the bank, check the layout on a single copy (never touches `./data`, output goes to the gitignored `./preview/`):
+
+```bash
+mini-amc preview --bank bank.example.yml            # preview/copy_0001.pdf
+mini-amc preview --png                               # + preview/page-N.png
+mini-amc preview --watch                             # re-render on change (typst watch);
+                                                     # regenerates copy.json if the bank changes
+# fallback: the build dir is self-contained — plain typst works there too
+cd preview/build/0001 && typst compile main.typ out.pdf   # or: typst watch main.typ out.pdf
+```
+
 ```bash
 mini-amc generate --bank bank.example.yml --copies 30 --seed 42
 ```

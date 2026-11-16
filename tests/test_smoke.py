@@ -26,7 +26,7 @@ def test_compile_fixture(tmp_path):
 
     import qrcode
 
-    template = Path("template")
+    template = Path("src/mini_amc/template")
     shutil.copy(template / "copy.example.json", template / "copy.json")
     for n in range(1, 65):
         qrcode.make(f"copy:0001|page:{n}").save(template / f"qr-{n}.png")

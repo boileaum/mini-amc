@@ -6,7 +6,8 @@
 
 - [ ] up-to-date environment: `uv sync --all-groups` (committed `uv.lock`)
 - [ ] `typst --version` → `typst 0.15.1`
-- [ ] finalized question bank (e.g. `bank.example.yml`): exactly 1 `correct: true` choice per question, at least 2 choices
+- [ ] finalized question bank (e.g. `bank.example.yml`): at least 1 `correct: true` choice per MCQ (several = multi-answer), at least 2 choices
+- [ ] layout checked on a single copy: `mini-amc preview --png` (or `--watch` while editing)
 - [ ] `scans/` empty, ready to receive the scans
 - [ ] `data/` from the previous exam archived (if reusing the folder)
 - [ ] dev checks pass: `uv run pre-commit run --all-files` and `uv run pre-commit run pytest --all-files --hook-stage pre-push` (plus `coverage` / `coverage-badge`)

@@ -17,6 +17,16 @@ import yaml
 from mini_amc.grade.notes import DEFAULT_BAREME
 
 MAX_PAGES = 64
+# template shipped in the package (used when no ./template dir in the CWD)
+PACKAGED_TEMPLATE = Path(__file__).resolve().parents[1] / "template"
+
+
+def default_template() -> Path:
+    """Local ``./template`` if present, else the packaged template."""
+    local = Path("template")
+    return local if local.is_dir() else PACKAGED_TEMPLATE
+
+
 # copy ids end up in file names and QR contents: keep them path/QR safe
 COPY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PAGE_W_CM = 21.0
@@ -373,7 +383,12 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--bank", type=Path, default=Path("bank.example.yml"))
     ap.add_argument("--copies", type=int, default=10)
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--template", type=Path, default=Path("template"))
+    ap.add_argument(
+        "--template",
+        type=Path,
+        default=None,
+        help="template dir (default: ./template if present, else the packaged one)",
+    )
     ap.add_argument("--students", type=Path, default=None)
     ap.add_argument("--students-id-column", default="copy_id")
     ap.add_argument("--students-name-columns", default="name")
@@ -383,6 +398,8 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.copies < 1:
         ap.error("--copies must be >= 1")
+    if args.template is None:
+        args.template = default_template()
     bank = load_bank(args.bank)
     students = None
     if args.students is not None:
