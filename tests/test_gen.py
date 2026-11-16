@@ -12,7 +12,7 @@ from mini_amc.gen.generate import (
     plan_copies,
 )
 
-BANK = Path("bank.example.yml")
+BANK = Path("src/mini_amc/examples/bank.example.yml")
 TEMPLATE = Path("template")
 
 

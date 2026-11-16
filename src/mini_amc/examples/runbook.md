@@ -2,6 +2,8 @@
 
 ## Prerequisites
 
+- [ ] exam folder scaffolded: `mini-amc init .` copies the example files here (`bank.example.yml`, `students.example.csv`, `students.moodle.example.csv`, this runbook)
+
 - [ ] up-to-date environment: `uv sync --all-groups` (committed `uv.lock`)
 - [ ] `typst --version` → `typst 0.15.1`
 - [ ] finalized question bank (e.g. `bank.example.yml`): exactly 1 `correct: true` choice per question, at least 2 choices

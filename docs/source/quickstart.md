@@ -17,7 +17,13 @@ typst --version         # -> typst 0.15.1
 
 ## 2. Prepare the question bank
 
-`bank.example.yml` (see the repo root): `meta` (title, course, date) + `questions`. Two kinds:
+Start from the example files — `mini-amc init` copies them into the exam folder (`bank.example.yml`, `students.example.csv`, `students.moodle.example.csv`, `runbook.md`):
+
+```bash
+mkdir my-exam && cd my-exam && mini-amc init .
+```
+
+`bank.example.yml` ([view on GitHub](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/bank.example.yml)): `meta` (title, course, date) + `questions`. Two kinds:
 
 ```yaml
 questions:
@@ -34,7 +40,17 @@ questions:
     max_points: 2
 ```
 
-Optionally, a nominative CSV links copy ids to students (see `students.example.csv` and `students.moodle.example.csv`):
+Optionally, a nominative CSV links copy ids to students. Example files (copied by `mini-amc init`): [`students.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.example.csv) and [`students.moodle.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.moodle.example.csv):
+
+```{literalinclude} ../../src/mini_amc/examples/students.example.csv
+:language: text
+:caption: students.example.csv (simple format: copy_id,name)
+```
+
+```{literalinclude} ../../src/mini_amc/examples/students.moodle.example.csv
+:language: text
+:caption: students.moodle.example.csv (Moodle-style export, ; separated)
+```
 
 ```bash
 # simple format: copy_id,name

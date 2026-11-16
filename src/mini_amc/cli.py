@@ -8,6 +8,10 @@ from pathlib import Path
 import uvicorn
 
 _COMMANDS = {
+    "init": (
+        "mini_amc.scaffold",
+        "Create an exam project dir with the example files (bank, CSVs, runbook)",
+    ),
     "generate": (
         "mini_amc.gen.generate",
         "Generate the exam copies (Typst PDFs, positions, answers)",

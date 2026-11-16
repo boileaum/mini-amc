@@ -46,9 +46,9 @@ The rollout backlog (nominative CSV link, grader-blackened free-text fields) is 
 
 | File | Role | Produced by |
 | --- | --- | --- |
-| `bank.example.yml` | Question bank (example): MCQ (`choices` + one `correct`) and open questions (`type: open`, `max_points`) | manual input |
-| `students.example.csv` | Nominative list (example), header `copy_id,name` | manual input |
-| `students.moodle.example.csv` | Moodle-style export (example): `;`-separated, link column `Numéro étudiant` | Moodle/LMS export |
+| `src/mini_amc/examples/bank.example.yml` | Question bank (example, copied by `mini-amc init`): MCQ (`choices` + one `correct`) and open questions (`type: open`, `max_points`) | manual input |
+| `src/mini_amc/examples/students.example.csv` | Nominative list (example), header `copy_id,name` | manual input |
+| `src/mini_amc/examples/students.moodle.example.csv` | Moodle-style export (example): `;`-separated, link column `Numéro étudiant` | Moodle/LMS export |
 | `data/copy_XXXX.json` | One copy: shuffled questions/choices, keys A/B/C… | `gen/generate.py` |
 | `data/copy_XXXX.pdf` | The printable copy (Typst template + `copy.json` + `qr-{page}.png`) | `gen/generate.py` via `typst compile` |
 | `data/build/XXXX/` | Typst build directory of one copy (`main.typ` + `copy.json` + `qr-N.png`) | `gen/generate.py` |

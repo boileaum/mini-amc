@@ -11,7 +11,7 @@ def test_help_lists_subcommands(capsys):
         cli.main(["--help"])
     assert exc.value.code == 0
     out = capsys.readouterr().out
-    for cmd in ("generate", "omr", "grades", "web"):
+    for cmd in ("init", "generate", "omr", "grades", "web"):
         assert cmd in out
 
 
