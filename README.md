@@ -32,7 +32,7 @@ Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every com
 ## Pipeline
 
 ```mermaid
-flowchart LR
+flowchart TD
   bank["bank.yml + students.csv"] --> gen["mini-amc generate"]
   gen --> pdf["data/copy_XXXX.pdf"]
   pdf --> print["print"] --> scans["scans/"]
