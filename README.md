@@ -16,19 +16,19 @@ Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every com
 - YAML question bank: single-answer MCQ + open (free-text) questions graded by the teacher (`type: open`, `max_points`)
 - Personalized PDF copies: seeded reproducible shuffle of questions/choices, check bubbles + grade boxes, 4 corner alignment squares + per-page QR code on every page
 - Optional nominative CSV (`--students`), Moodle-export friendly: link column and name columns configurable, delimiter auto-detected
-- 100% local OMR reading (OpenCV only): corners → homography → QR → bubbles/grade boxes, annotated scans, statuses `ok` / `needs_review` / `partial` / `unread`
+- 100% local OMR (Optical Mark Recognition, OpenCV only): corners → homography → QR → bubbles/grade boxes, annotated scans, statuses `ok` / `needs_review` / `partial` / `unread`
 - Review web UI (FastAPI): copy list, per-question detail, annotated scans, manual corrections (MCQ keys or open-question grade values)
 - CSV grades: `notes.csv` (per copy, with student name) + `notes_detail.csv` (per question); bareme v1: 1 pt per correct MCQ, open question = blackened box value (0..max_points), no negative points
 
 ## Components
 
-| Software brick | Tech | Role | Main outputs |
-| --- | --- | --- | --- |
-| CLI `mini-amc` | argparse (single entry point) | `generate` / `omr` / `web` / `grades` subcommands | — |
-| Copy generation | Python (seeded shuffle, QR PNGs) + Typst 0.15.1, zero external Typst packages | bank YAML (+ students CSV) → personalized PDF copies + bubble positions + answer key | `data/copy_XXXX.pdf`, `positions.json`, `answers.json`, `students.json` |
-| OMR reading | OpenCV (`cv2.QRCodeDetector`) + numpy, 100% local | scans → corner markers → homography → QR → bubbles/grade boxes | `data/omr_results.json`, `data/annotated/` |
-| Review UI | FastAPI + uvicorn | manual corrections of the detected answers | `data/corrections.json` |
-| Grading | Python stdlib (`csv`) | bareme v1 over OMR results + corrections | `data/notes.csv`, `data/notes_detail.csv` |
+| Component | Implementation |
+| --- | --- |
+| CLI `mini-amc` | argparse (single entry point) |
+| Copy generation | Python (seeded shuffle, QR PNGs) + Typst 0.15.1, zero external Typst packages |
+| OMR reading (Optical Mark Recognition) | OpenCV (`cv2.QRCodeDetector`) + numpy, 100% local |
+| Review web UI | FastAPI + uvicorn |
+| Grading + CSV export | Python stdlib (`csv`) |
 
 ## Pipeline
 
@@ -39,22 +39,22 @@ flowchart TD
   classDef data fill:#d1ecf1,stroke:#0c5460
 
   bank["bank.yml + students.csv"]:::data
-  bank --> gen["mini-amc generate"]:::tool
+  bank --> gen("mini-amc generate"):::tool
   gen --> pdf["data/copy_XXXX.pdf"]:::data
-  pdf --> print["Print"]:::tool
+  pdf --> print("Print"):::tool
   print --> exam(["EXAM<br/>students answer on paper"]):::exam
   exam --> scans["scans/"]:::data
-  scans --> omr["mini-amc omr"]:::tool
+  scans --> omr("mini-amc omr"):::tool
   omr --> res["data/omr_results.json + annotated/"]:::data
-  res --> web["mini-amc web (review UI)"]:::tool
-  res --> grades["mini-amc grades"]:::tool
+  res --> web("mini-amc web (review UI)"):::tool
+  res --> grades("mini-amc grades"):::tool
   web --> corr["data/corrections.json"]:::data
   corr --> grades
   grades --> notes["data/notes.csv + notes_detail.csv"]:::data
 
   subgraph legend["Legend"]
     direction LR
-    lt["command"]:::tool
+    lt("command"):::tool
     ld["data file"]:::data
     le(["exam moment"]):::exam
   end
