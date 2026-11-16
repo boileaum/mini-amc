@@ -202,7 +202,8 @@ def list_copies() -> dict:
 
     Statuses: ``ok`` / ``needs_review`` / ``partial`` / ``unread``.
     A copy known from ``positions.json`` but absent from the OMR results
-    is ``unread``.
+    is ``unread``. Only the non-``ok`` copies need a human review; ``ok``
+    copies are final (corrections remain possible as overrides).
 
     Returns:
         Dict with a ``copies`` list (one entry per copy: status, pages

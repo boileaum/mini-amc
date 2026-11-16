@@ -40,7 +40,7 @@ flowchart TD
   gen --> pdf["data/copy_XXXX.pdf"]:::data
   pdf --> print("Print"):::tool
   print --> exam(["EXAM<br/>students answer on paper"]):::exam
-  exam --> manual(["Manual grading on paper<br/>blacken one grade box (0..max) per open question"]):::exam
+  exam --> manual(["Manual grading<br/>on paper"]):::exam
   manual --> scans["scans/"]:::data
   scans --> omr("mini-amc omr"):::tool
   omr --> res["data/omr_results.json + annotated/"]:::data

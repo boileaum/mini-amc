@@ -222,7 +222,7 @@ def read_bubbles(
     its fill >= ``threshold``; ``needs_review`` if several choices are
     checked or a gray trace exists (fill between ``gray_threshold`` and
     ``threshold``). For open questions (grade boxes), ``needs_review``
-    also when no box is blackened (not graded yet): exactly one box must
+    also when no box is blackened on paper: exactly one box must
     be checked.
 
     Args:
