@@ -21,17 +21,13 @@ extensions = [
 myst_enable_extensions = ["tasklist"]
 myst_fence_as_directive = ["mermaid"]
 
-# larger nodes/spacing so the pipeline diagram stays readable in the docs;
-# useMaxWidth=False stops mermaid from shrinking the SVG to the container
-# width (that is what made the diagram tiny)
+# the pipeline diagram is tall: the extension's default CSS forces the SVG into
+# a 500px-high box (mermaid_height), which shrinks it to unreadable — let the
+# SVG keep its natural height, and enable pan/zoom on the big diagram
+mermaid_height = "auto"
+mermaid_d3_zoom = True
 mermaid_init_config = {
-    "startOnLoad": False,
-    "themeVariables": {"fontSize": "26px"},
-    "flowchart": {
-        "nodeSpacing": 90,
-        "rankSpacing": 90,
-        "useMaxWidth": False,
-    },
+    "themeVariables": {"fontSize": "24px"},
 }
 
 templates_path = ["_templates"]

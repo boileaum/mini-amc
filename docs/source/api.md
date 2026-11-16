@@ -1,7 +1,5 @@
 # API
 
-One page per module:
-
 | Module | Page | What it does |
 | --- | --- | --- |
 | `mini_amc.cli` | [CLI](api/cli.md) | single `mini-amc` entry point, subcommands `generate` / `omr` / `grades` / `web` |
