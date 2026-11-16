@@ -22,9 +22,8 @@ Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every com
 
 ## Components
 
-| Component | Implementation |
+| Main component | Implementation |
 | --- | --- |
-| CLI `mini-amc` | argparse (single entry point) |
 | Copy generation | Python (seeded shuffle, QR PNGs) + Typst 0.15.1, zero external Typst packages |
 | OMR reading (Optical Mark Recognition) | OpenCV (`cv2.QRCodeDetector`) + numpy, 100% local |
 | Review web UI | FastAPI + uvicorn |
@@ -51,13 +50,6 @@ flowchart TD
   web --> corr["data/corrections.json"]:::data
   corr --> grades
   grades --> notes["data/notes.csv + notes_detail.csv"]:::data
-
-  subgraph legend["Legend"]
-    direction LR
-    lt("command"):::tool
-    ld["data file"]:::data
-    le(["exam moment"]):::exam
-  end
 ```
 
 ## Install
