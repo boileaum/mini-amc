@@ -62,6 +62,8 @@ def load_bank(path: Path) -> dict:
                 raise ValueError(
                     f"question {q.get('id')}: open question needs max_points (int >= 1)"
                 )
+            # grade boxes 0..max_points are drawn in a single row on the copy;
+            # 20 keeps that row within the page width
             if mp > 20:
                 raise ValueError(f"question {q.get('id')}: max_points <= 20")
             continue
@@ -173,6 +175,8 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
         raise ValueError("no copy ids")
     if len(set(copy_ids)) != len(copy_ids):
         raise ValueError("duplicate copy ids")
+    # one shared rng: each copy gets a different shuffle, but the whole run
+    # is reproducible from the seed alone
     rng = random.Random(seed)
     questions = bank["questions"]
     copies = []
@@ -193,6 +197,8 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
                 continue
             choices = rng.sample(q["choices"], len(q["choices"]))
             copy_choices = []
+            # keys reassigned A, B, C… in shuffled order; load_bank caps
+            # choices at 26, so the zip never truncates
             for c, key in zip(choices, string.ascii_uppercase, strict=False):
                 copy_choices.append(
                     {"key": key, "text": c["text"], "correct": bool(c.get("correct"))}

@@ -23,6 +23,13 @@ extensions = [
 myst_enable_checkboxes = True
 myst_fence_as_directive = ["mermaid"]
 
+# larger nodes/spacing so the pipeline diagram stays readable in the docs
+mermaid_init_config = {
+    "startOnLoad": False,
+    "themeVariables": {"fontSize": "20px"},
+    "flowchart": {"nodeSpacing": 70, "rankSpacing": 70},
+}
+
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "_autosummary"]
 

@@ -301,3 +301,56 @@ def test_read_bubbles_open_gradeboxes():
     assert blank["checked"] == [] and blank["needs_review"] is True
     double = make({0, 2})[0]
     assert double["checked"] == [0, 2] and double["needs_review"] is True
+
+
+def test_aggregate_copies_gradebox_only_page():
+    from mini_amc.omr.read_scans import aggregate_copies
+
+    positions = {
+        "0009": {
+            "bubbles": [{"qid": "q1", "key": "A", "page": 1, "x_pt": 0.0, "y_pt": 0.0}],
+            "gradeboxes": [
+                {"qid": "q9", "value": v, "page": 2, "x_pt": 0.0, "y_pt": 0.0}
+                for v in range(2)
+            ],
+        }
+    }
+    results = {
+        "s1.png": {
+            "scan": "s1.png",
+            "status": "ok",
+            "copy_id": "0009",
+            "page": 1,
+            "questions": [
+                {
+                    "qid": "q1",
+                    "type": "mcq",
+                    "fills": {"A": 0.9},
+                    "checked": ["A"],
+                    "needs_review": False,
+                }
+            ],
+            "annotated": None,
+            "error": None,
+        },
+        "s2.png": {
+            "scan": "s2.png",
+            "status": "ok",
+            "copy_id": "0009",
+            "page": 2,
+            "questions": [
+                {
+                    "qid": "q9",
+                    "type": "open",
+                    "fills": {"1": 0.9},
+                    "checked": [1],
+                    "needs_review": False,
+                }
+            ],
+            "annotated": None,
+            "error": None,
+        },
+    }
+    copies = aggregate_copies(results, positions)
+    assert copies["0009"]["status"] == "ok"
+    assert copies["0009"]["pages"] == [1, 2]

@@ -51,6 +51,8 @@ def detect_markers(image: np.ndarray) -> np.ndarray:
     cands = []
     for i in range(1, n):
         x, y, w, h, a = stats[i]
+        # calibrated on rendered scans: a 1.2cm marker at 150-300dpi covers
+        # 0.12%-2% of the page; fill/aspect reject text blobs and QR modules
         if not (0.0012 * area <= a <= 0.02 * area):
             continue
         fill = a / (w * h)
@@ -194,6 +196,7 @@ def read_qr(warped: np.ndarray) -> dict:
             if ok and points is not None and len(points) > 0
             else None
         )
+        # QR is printed top right; generous bounds (x > 55% width, y < 30% height)
         top_right = c is not None and c[0] > 0.55 * w and c[1] < 0.3 * h
         if top_right:
             return parsed
@@ -271,6 +274,7 @@ def read_bubbles(
         q = questions[qid]
 
         def sort_key(item) -> tuple:
+            # numeric sort for grade values ("0".."20"), alpha for MCQ keys
             k = item[0]
             return (0, int(k)) if k.isdigit() else (1, k)
 
@@ -430,7 +434,11 @@ def aggregate_copies(results: dict, positions: dict) -> dict:
         if cid not in positions:
             status = "unread"
         else:
-            expected = {b["page"] for b in positions[cid]["bubbles"]}
+            # a page can hold only open questions (grade boxes, no bubble):
+            # expected pages = union of bubble and gradebox pages
+            expected = {b["page"] for b in positions[cid]["bubbles"]} | {
+                g["page"] for g in positions[cid].get("gradeboxes", [])
+            }
             pages = sorted(set(c["pages"]))
             if pages and set(pages) != expected:
                 status = "partial"
@@ -465,7 +473,9 @@ def main(argv: list[str] | None = None) -> None:
     if not args.scans.is_dir():
         ap.error(f"scans directory not found: {args.scans}")
     if not args.positions.exists():
-        ap.error(f"positions file not found: {args.positions} (run mini-amc-gen first)")
+        ap.error(
+            f"positions file not found: {args.positions} (run mini-amc generate first)"
+        )
     positions = json.loads(args.positions.read_text(encoding="utf-8"))
     scans = (
         sorted(args.scans.glob("*.png"))

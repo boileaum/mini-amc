@@ -1,36 +1,13 @@
 # API
 
-## CLI
+One page per module (see the sub-menu):
 
-```{eval-rst}
-.. automodule:: mini_amc.cli
-   :members:
-```
+```{toctree}
+:hidden:
 
-## Copy generation
-
-```{eval-rst}
-.. automodule:: mini_amc.gen.generate
-   :members:
-```
-
-## OMR reading
-
-```{eval-rst}
-.. automodule:: mini_amc.omr.read_scans
-   :members:
-```
-
-## Review web UI
-
-```{eval-rst}
-.. automodule:: mini_amc.web.app
-   :members:
-```
-
-## Grading
-
-```{eval-rst}
-.. automodule:: mini_amc.grade.notes
-   :members:
+api/cli.md
+api/generate.md
+api/omr.md
+api/web.md
+api/grading.md
 ```

@@ -22,26 +22,28 @@ Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every com
 
 ## Components
 
-| Command | Role | Main outputs |
-| --- | --- | --- |
-| `mini-amc generate` | bank YAML (+ students CSV) → Typst PDFs | `data/copy_XXXX.pdf`, `positions.json`, `answers.json`, `students.json` |
-| `mini-amc omr` | scans → OMR results | `data/omr_results.json`, `data/annotated/` |
-| `mini-amc web` | review UI (FastAPI) | `data/corrections.json` |
-| `mini-amc grades` | results + corrections → grades | `data/notes.csv`, `data/notes_detail.csv` |
+| Software brick | Tech | Role | Main outputs |
+| --- | --- | --- | --- |
+| CLI `mini-amc` | argparse (single entry point) | `generate` / `omr` / `web` / `grades` subcommands | — |
+| Copy generation | Python (seeded shuffle, QR PNGs) + Typst 0.15.1, zero external Typst packages | bank YAML (+ students CSV) → personalized PDF copies + bubble positions + answer key | `data/copy_XXXX.pdf`, `positions.json`, `answers.json`, `students.json` |
+| OMR reading | OpenCV (`cv2.QRCodeDetector`) + numpy, 100% local | scans → corner markers → homography → QR → bubbles/grade boxes | `data/omr_results.json`, `data/annotated/` |
+| Review UI | FastAPI + uvicorn | manual corrections of the detected answers | `data/corrections.json` |
+| Grading | Python stdlib (`csv`) | bareme v1 over OMR results + corrections | `data/notes.csv`, `data/notes_detail.csv` |
 
 ## Pipeline
 
 ```mermaid
 flowchart TD
-  classDef exam fill:#fff3cd,stroke:#b8860b,stroke-width:2px
+  classDef exam fill:#fff3cd,stroke:#b8860b,stroke-width:3px
   classDef tool fill:#d4edda,stroke:#2e7d32,stroke-width:2px
   classDef data fill:#d1ecf1,stroke:#0c5460
 
-  exam["Exam<br/>bank.yml + students.csv"]:::exam
-  exam --> gen["mini-amc generate"]:::tool
+  bank["bank.yml + students.csv"]:::data
+  bank --> gen["mini-amc generate"]:::tool
   gen --> pdf["data/copy_XXXX.pdf"]:::data
   pdf --> print["Print"]:::tool
-  print --> scans["scans/"]:::data
+  print --> exam(["EXAM<br/>students answer on paper"]):::exam
+  exam --> scans["scans/"]:::data
   scans --> omr["mini-amc omr"]:::tool
   omr --> res["data/omr_results.json + annotated/"]:::data
   res --> web["mini-amc web (review UI)"]:::tool
@@ -54,7 +56,7 @@ flowchart TD
     direction LR
     lt["command"]:::tool
     ld["data file"]:::data
-    le["exam"]:::exam
+    le(["exam moment"]):::exam
   end
 ```
 

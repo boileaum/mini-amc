@@ -254,11 +254,14 @@ def copy_scan(copy_id: str, page: int):
     Raises:
         HTTPException: 404 if no readable scan exists for this copy/page.
     """
+    # one scan per (copy, page): stop at the first match, whether it yields
+    # an image (return) or not (unread / missing file -> 404 below)
     for s in _omr()["scans"].values():
         if s.get("copy_id") != copy_id or s.get("page") != page:
             continue
         if s["status"] == "unread":
             break
+        # prefer the annotated image, fall back to the raw scan
         for candidate in (s.get("annotated"), os.path.join("scans", s["scan"])):
             if not candidate:
                 continue
@@ -302,6 +305,7 @@ def post_correction(copy_id: str, payload: dict) -> dict:
         valid = (
             isinstance(checked, list)
             and all(
+                # bool is a subclass of int: True would pass as 1, exclude it
                 isinstance(k, int) and not isinstance(k, bool) and 0 <= k <= max_points
                 for k in checked
             )

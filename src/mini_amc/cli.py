@@ -49,6 +49,8 @@ def main(argv: list[str] | None = None) -> None:
         argv: Command line arguments (defaults to ``sys.argv[1:]``).
     """
     argv = sys.argv[1:] if argv is None else argv
+    # the subparsers below are declared without arguments, so argparse would
+    # not show the subcommand's own --help: delegate -h/--help directly
     if argv and argv[0] in (*_COMMANDS, "web") and argv[1:2] in (["-h"], ["--help"]):
         import importlib
 

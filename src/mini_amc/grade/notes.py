@@ -38,6 +38,7 @@ def question_point(
     if expected == "open":
         if len(effective) == 1 and max_points is not None:
             try:
+                # int() tolerates string values from a hand-edited corrections.json
                 v = int(effective[0])
             except (TypeError, ValueError):
                 return 0
