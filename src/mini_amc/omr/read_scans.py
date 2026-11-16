@@ -21,6 +21,11 @@ BUBBLE_R_PT = 4.5
 # +radius in x and +3pt in y — offsets calibrated against rendered PNGs
 BUBBLE_DX_PT = BUBBLE_R_PT
 BUBBLE_DY_PT = 3.0
+# multi-answer questions use a 9pt square instead of the circle; its center is
+# calibrated the same way against rendered PNGs (measured ~4.25 / ~4.4 pt)
+SQUARE_SIZE_PT = 9.0
+SQUARE_DX_PT = 4.25
+SQUARE_DY_PT = 4.4
 # ink-density disk used to measure the fill of a bubble
 FILL_R_PT = 2.5
 # a fully blackened bubble measures ~0.75-0.95 (blur/noise included), an empty
@@ -219,11 +224,12 @@ def read_bubbles(
 
     For each bubble/grade box, measures the ink density of the inner disk
     (center = metadata + calibrated offset). A choice is checked if
-    its fill >= ``threshold``; ``needs_review`` if several choices are
-    checked or a gray trace exists (fill between ``gray_threshold`` and
-    ``threshold``). For open questions (grade boxes), ``needs_review``
-    also when no box is blackened on paper: exactly one box must
-    be checked.
+    its fill >= ``threshold``; ``needs_review`` if a gray trace exists (fill
+    between ``gray_threshold`` and ``threshold``), or if several choices are
+    checked on a single-answer question (multi-answer questions accept any
+    number of checked boxes). For open questions (grade boxes),
+    ``needs_review`` also when no box is blackened on paper: exactly one box
+    must be checked.
 
     Args:
         warped: Straightened and reoriented page.
@@ -244,8 +250,13 @@ def read_bubbles(
     r = max(1, int(FILL_R_PT * s))
 
     def measure(b: dict) -> float:
-        cx = int((b["x_pt"] + BUBBLE_DX_PT) * s)
-        cy = int((b["y_pt"] + BUBBLE_DY_PT) * s)
+        # bubble center: calibrated offset, per shape (circle / square)
+        if b.get("shape") == "square":
+            dx, dy = SQUARE_DX_PT, SQUARE_DY_PT
+        else:
+            dx, dy = BUBBLE_DX_PT, BUBBLE_DY_PT
+        cx = int((b["x_pt"] + dx) * s)
+        cy = int((b["y_pt"] + dy) * s)
         y0, y1 = max(0, cy - r), min(h, cy + r)
         x0, x1 = max(0, cx - r), min(w, cx + r)
         patch = bw[y0:y1, x0:x1]
@@ -259,7 +270,14 @@ def read_bubbles(
         if b["page"] != page:
             continue
         q = questions.setdefault(
-            b["qid"], {"qid": b["qid"], "type": "mcq", "fills": {}, "checked": []}
+            b["qid"],
+            {
+                "qid": b["qid"],
+                "type": "mcq",
+                "multi": b.get("multi", False),
+                "fills": {},
+                "checked": [],
+            },
         )
         q["fills"][b["key"]] = round(measure(b), 3)
     for b in copy_positions.get("gradeboxes", []):
@@ -288,7 +306,11 @@ def read_bubbles(
             q["needs_review"] = len(checked) != 1 or len(gray_marks) > 0
         else:
             q["checked"] = checked
-            q["needs_review"] = len(checked) > 1 or len(gray_marks) > 0
+            # several checked boxes are fine on multi-answer questions
+            # (square bubbles); on single-answer ones it is a doubt
+            q["needs_review"] = len(gray_marks) > 0 or (
+                not q["multi"] and len(checked) > 1
+            )
         result.append(q)
     return result
 
@@ -312,8 +334,13 @@ def _draw_annotations(
     for b in copy_positions["bubbles"]:
         if b["page"] != page:
             continue
-        cx = int((b["x_pt"] + BUBBLE_DX_PT) * s)
-        cy = int((b["y_pt"] + BUBBLE_DY_PT) * s)
+        dx, dy = (
+            (SQUARE_DX_PT, SQUARE_DY_PT)
+            if b.get("shape") == "square"
+            else (BUBBLE_DX_PT, BUBBLE_DY_PT)
+        )
+        cx = int((b["x_pt"] + dx) * s)
+        cy = int((b["y_pt"] + dy) * s)
         q = qmap[b["qid"]]
         if b["key"] in q["checked"]:
             color = (0, 180, 0)

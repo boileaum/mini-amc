@@ -9,7 +9,19 @@ from mini_amc.omr.read_scans import (
     PAGE_H_PT,
     PAGE_W_PT,
     SCALE,
+    SQUARE_DX_PT,
+    SQUARE_DY_PT,
+    SQUARE_SIZE_PT,
 )
+
+
+def bubble_center(b):
+    if b.get("shape") == "square":
+        dx, dy = SQUARE_DX_PT, SQUARE_DY_PT
+    else:
+        dx, dy = BUBBLE_DX_PT, BUBBLE_DY_PT
+    return int((b["x_pt"] + dx) * SCALE), int((b["y_pt"] + dy) * SCALE)
+
 
 W = round(PAGE_W_PT * SCALE)
 H = round(PAGE_H_PT * SCALE)
@@ -20,23 +32,38 @@ QR_X0 = W - round(2.2 * 72 / 2.54 * SCALE) - QR_PX
 QR_Y0 = CORNER_PX
 
 
-def _bubble_pos(qid, key, idx, page=1):
+def _bubble_pos(qid, key, idx, page=1, shape="circle", multi=False):
     return {
         "qid": qid,
         "key": key,
         "page": page,
         "x_pt": 100.0,
         "y_pt": 200.0 + 22.0 * idx,
+        "shape": shape,
+        "multi": multi,
     }
 
 
 def _draw_bubble(img, b, filled=False):
-    cx = int((b["x_pt"] + BUBBLE_DX_PT) * SCALE)
-    cy = int((b["y_pt"] + BUBBLE_DY_PT) * SCALE)
-    r = int(BUBBLE_R_PT * SCALE)
-    if filled:
-        cv2.circle(img, (cx, cy), int(3.2 * SCALE), (0, 0, 0), -1)
-    cv2.circle(img, (cx, cy), r, (0, 0, 0), max(1, int(SCALE)))
+    cx, cy = bubble_center(b)
+    if b.get("shape") == "square":
+        half = int(SQUARE_SIZE_PT * SCALE / 2)
+        if filled:
+            cv2.rectangle(
+                img, (cx - half, cy - half), (cx + half, cy + half), (0, 0, 0), -1
+            )
+        cv2.rectangle(
+            img,
+            (cx - half, cy - half),
+            (cx + half, cy + half),
+            (0, 0, 0),
+            max(1, int(SCALE)),
+        )
+    else:
+        r = int(BUBBLE_R_PT * SCALE)
+        if filled:
+            cv2.circle(img, (cx, cy), int(3.2 * SCALE), (0, 0, 0), -1)
+        cv2.circle(img, (cx, cy), r, (0, 0, 0), max(1, int(SCALE)))
 
 
 def _make_page(copy_id, page, answers):

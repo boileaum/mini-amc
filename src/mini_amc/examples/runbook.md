@@ -25,7 +25,7 @@
 
 ## Exam
 
-- [ ] instructions: check ONE single box per MCQ question; open (free-text) questions are left blank during the exam
+- [ ] instructions: check ONE box per single-answer MCQ (circles), several per multi-answer (squares); open (free-text) questions are left blank during the exam
 - [ ] collect the sheets
 
 ## Manual grading (on paper, before scanning)

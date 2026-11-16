@@ -7,7 +7,17 @@ import numpy as np
 import pytest
 import qrcode
 import yaml
-from synth import CORNER_PX, MARKER_PX, QR_PX, QR_X0, QR_Y0, H, W, _warp_photo
+from synth import (
+    CORNER_PX,
+    MARKER_PX,
+    QR_PX,
+    QR_X0,
+    QR_Y0,
+    H,
+    W,
+    _warp_photo,
+    bubble_center,
+)
 
 from mini_amc.gen.generate import main as gen_main
 from mini_amc.grade.notes import main as grades_main
@@ -16,6 +26,7 @@ from mini_amc.omr.read_scans import (
     BUBBLE_DY_PT,
     BUBBLE_R_PT,
     SCALE,
+    SQUARE_SIZE_PT,
 )
 from mini_amc.omr.read_scans import (
     main as omr_main,
@@ -35,7 +46,12 @@ def _write_bank(path: Path) -> None:
             "id": f"q{i}",
             "text": f"Question number {i}?",
             "choices": [
-                {"text": f"choice {j}", "correct": j == i % 3} for j in range(3)
+                # i=1,2 are multi-answer (square bubbles): two correct choices
+                {
+                    "text": f"choice {j}",
+                    "correct": j == i % 3 or (i in (1, 2) and j == (i % 3 + 1) % 3),
+                }
+                for j in range(3)
             ],
         }
         for i in range(1, N_QUESTIONS - N_OPEN + 1)
@@ -74,13 +90,26 @@ def _page_image(copy_id: str, page: int, copy_pos: dict, answers: dict):
     for b in copy_pos["bubbles"]:
         if b["page"] != page:
             continue
-        cx = int((b["x_pt"] + BUBBLE_DX_PT) * SCALE)
-        cy = int((b["y_pt"] + BUBBLE_DY_PT) * SCALE)
-        cv2.circle(
-            img, (cx, cy), int(BUBBLE_R_PT * SCALE), (0, 0, 0), max(1, int(SCALE))
-        )
-        if answers.get(b["qid"]) == b["key"]:
-            cv2.circle(img, (cx, cy), int(3.2 * SCALE), (0, 0, 0), -1)
+        cx, cy = bubble_center(b)
+        if b.get("shape") == "square":
+            half = int(SQUARE_SIZE_PT * SCALE / 2)
+            cv2.rectangle(
+                img,
+                (cx - half, cy - half),
+                (cx + half, cy + half),
+                (0, 0, 0),
+                max(1, int(SCALE)),
+            )
+            if b["key"] in (answers.get(b["qid"]) or []):
+                cv2.rectangle(
+                    img, (cx - half, cy - half), (cx + half, cy + half), (0, 0, 0), -1
+                )
+        else:
+            cv2.circle(
+                img, (cx, cy), int(BUBBLE_R_PT * SCALE), (0, 0, 0), max(1, int(SCALE))
+            )
+            if b["key"] in (answers.get(b["qid"]) or []):
+                cv2.circle(img, (cx, cy), int(3.2 * SCALE), (0, 0, 0), -1)
     gradeboxes = copy_pos.get("gradeboxes", [])
     for g in gradeboxes:
         if g["page"] != page:
@@ -209,7 +238,12 @@ def test_e2e_omr_all_copies_ok(pipeline):
                 )
                 assert read[qid] == [mp], (cid, qid, read[qid], mp)
             else:
-                assert read[qid] == [expected], (cid, qid, read[qid], expected)
+                assert sorted(read[qid]) == sorted(expected), (
+                    cid,
+                    qid,
+                    read[qid],
+                    expected,
+                )
 
 
 def test_e2e_grades(pipeline):
@@ -244,7 +278,7 @@ def test_e2e_web_and_correction(pipeline, monkeypatch):
     r = client.get("/copy/0001")
     assert r.json()["score"] == SCORE_MAX
     qid = next(q for q, v in pipeline["answers"]["0001"].items() if v != "open")
-    wrong = next(k for k in "ABC" if k != pipeline["answers"]["0001"][qid])
+    wrong = next(k for k in "ABC" if k not in pipeline["answers"]["0001"][qid])
     r = client.post("/copy/0001/correction", json={"qid": qid, "checked": [wrong]})
     assert r.status_code == 200
     assert r.json()["score"] == SCORE_MAX - 1

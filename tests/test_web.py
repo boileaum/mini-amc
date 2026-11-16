@@ -30,7 +30,7 @@ def data_dir(tmp_path):
     }
     (data / "positions.json").write_text(json.dumps(positions), encoding="utf-8")
     (data / "answers.json").write_text(
-        json.dumps({"0001": {"q1": "B", "q2": "A", "q3": "open"}}), encoding="utf-8"
+        json.dumps({"0001": {"q1": ["B"], "q2": ["A"], "q3": "open"}}), encoding="utf-8"
     )
     copy = {
         "copy_id": "0001",
@@ -164,7 +164,7 @@ def test_copy_detail(client):
     q1 = next(q for q in body["questions"] if q["qid"] == "q1")
     assert q1["checked"] == ["A", "B"]
     assert q1["needs_review"] is True
-    assert q1["expected"] == "B"
+    assert q1["expected"] == ["B"]
     assert q1["correction"] is None
     assert q1["page"] == 1
     assert q1["choices"][1]["text"] == "Paris"

@@ -7,7 +7,7 @@ The whole project is in English: code, docstrings, comments, documentation, CLI 
 
 Included:
 
-- Single-answer MCQ.
+- MCQ, single-answer (circle bubbles) or multi-answer (square bubbles, several `correct: true` choices): 1 pt iff the checked set equals the expected set.
 - Open (free-text) questions graded by the teacher on the paper copy, before scanning: the copy shows a free area + a gray grader area with lettered grade boxes A, B, … (box value = letter index, 0..max_points); the OMR reads the blackened box and the score is its value; ungraded (no box) → `needs_review`, still correctable in the review UI.
 - v1 grading scheme: 1 point per correct MCQ answer, 0 otherwise, no negative points; open questions score 0..max_points.
 - Personalized PDF copy generation (question and choice shuffling, seeded and reproducible).
@@ -19,8 +19,7 @@ Included:
 
 Out of scope for v1:
 
-- Multi-answer MCQ.
-- Advanced grading schemes (negative points, per-question schemes, etc.).
+- Advanced grading schemes beyond the named ones (negative points, per-question schemes, custom formulas).
 - Moodle / LMS export (the import direction is covered by the flexible `--students` CSV).
 - Email sending.
 - Rich UI.

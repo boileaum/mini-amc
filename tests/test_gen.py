@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+import yaml
 
 from mini_amc.gen.generate import (
     compile_copy,
@@ -37,8 +38,8 @@ def test_plan_copies_validity():
             keys = [ch["key"] for ch in q["choices"]]
             assert keys == list("ABC"[: len(keys)])
             corrects = [ch for ch in q["choices"] if ch["correct"]]
-            assert len(corrects) == 1
-            assert c["answers"][q["id"]] == corrects[0]["key"]
+            assert len(corrects) >= 1
+            assert c["answers"][q["id"]] == sorted(ch["key"] for ch in corrects)
 
 
 def test_plan_copies_seed_changes_order():
@@ -114,12 +115,14 @@ def test_main_end_to_end(tmp_path, monkeypatch):
     for cid, ans in answers.items():
         assert set(ans) == {"q1", "q2", "q3", "q4", "q5"}
         assert ans["q5"] == "open"
-        assert all(k in "ABC" for k, v in ans.items() if k != "q5" for k in [v])
+        assert all(all(x in "ABC" for x in v) for k, v in ans.items() if k != "q5")
         copy_json = json.loads((tmp_path / f"copy_{cid}.json").read_text())
         for q in copy_json["questions"]:
             if q["type"] == "open":
                 continue
-            assert ans[q["id"]] == next(c["key"] for c in q["choices"] if c["correct"])
+            assert ans[q["id"]] == sorted(
+                c["key"] for c in q["choices"] if c["correct"]
+            )
 
 
 def test_load_bank_rejects_invalid_questions(tmp_path):
@@ -388,3 +391,39 @@ def test_plan_copies_open_question():
     assert copies[0]["answers"]["q5"] == "open"
     q1 = next(q for q in copies[0]["questions"] if q["id"] == "q1")
     assert q1["type"] == "mcq" and "choices" in q1
+
+
+def test_load_bank_multi_answer(tmp_path):
+    multi = {
+        "questions": [
+            {
+                "id": "q1",
+                "text": "t",
+                "choices": [
+                    {"text": "a", "correct": True},
+                    {"text": "b"},
+                    {"text": "c", "correct": True},
+                ],
+            }
+        ]
+    }
+    p = tmp_path / "multi.yml"
+    p.write_text(yaml.dump(multi), encoding="utf-8")
+    bank = load_bank(p)
+    copies = plan_copies(bank, ["0001"], 1)
+    q = copies[0]["questions"][0]
+    assert q["multi"] is True
+    assert copies[0]["answers"]["q1"] == sorted(
+        c["key"] for c in q["choices"] if c["correct"]
+    )
+    assert len(copies[0]["answers"]["q1"]) == 2
+
+    zero = {
+        "questions": [
+            {"id": "q1", "text": "t", "choices": [{"text": "a"}, {"text": "b"}]}
+        ]
+    }
+    p2 = tmp_path / "zero.yml"
+    p2.write_text(yaml.dump(zero), encoding="utf-8")
+    with pytest.raises(ValueError, match="at least 1 correct"):
+        load_bank(p2)

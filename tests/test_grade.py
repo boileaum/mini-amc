@@ -97,13 +97,18 @@ def data_dir(tmp_path):
 
 
 def test_question_point():
-    assert question_point(["A"], None, "A") == 1
-    assert question_point(["A"], None, "B") == 0
-    assert question_point(["A", "B"], None, "A") == 0
-    assert question_point([], None, "A") == 0
-    assert question_point(["C"], ["A"], "A") == 1
-    assert question_point(["A"], ["B"], "A") == 0
-    assert question_point(["A"], [], "A") == 0
+    assert question_point(["A"], None, ["A"]) == 1
+    assert question_point(["A"], None, ["B"]) == 0
+    assert question_point(["A", "B"], None, ["A"]) == 0
+    assert question_point([], None, ["A"]) == 0
+    assert question_point(["C"], ["A"], ["A"]) == 1
+    assert question_point(["A"], ["B"], ["A"]) == 0
+    assert question_point(["A"], [], ["A"]) == 0
+    # multi-answer: exact set = 1 pt
+    assert question_point(["A", "B"], None, ["A", "B"]) == 1
+    assert question_point(["B", "A"], None, ["A", "B"]) == 1
+    assert question_point(["A"], None, ["A", "B"]) == 0
+    assert question_point(["A", "C"], None, ["A", "B"]) == 0
 
 
 def test_compute_grades(data_dir):

@@ -342,3 +342,38 @@ def test_aggregate_copies_gradebox_only_page():
     copies = aggregate_copies(results, positions)
     assert copies["0009"]["status"] == "ok"
     assert copies["0009"]["pages"] == [1, 2]
+
+
+def test_read_bubbles_multi_answer_squares():
+    from synth import _draw_bubble
+
+    from mini_amc.omr.read_scans import read_bubbles
+
+    bubbles = [
+        _bubble_pos("qm", k, i, shape="square", multi=True) for i, k in enumerate("ABC")
+    ]
+    img = np.full((H, W, 3), 255, dtype=np.uint8)
+    _draw_bubble(img, bubbles[0], filled=True)
+    _draw_bubble(img, bubbles[2], filled=True)
+    pos = {
+        "page": {"w_pt": 595.28, "h_pt": 841.89},
+        "questions": [],
+        "bubbles": bubbles,
+    }
+    q = read_bubbles(img, pos, 1)[0]
+    assert q["multi"] is True
+    assert q["checked"] == ["A", "C"]
+    assert q["needs_review"] is False
+
+    # same but single-answer (circle): two checked = needs_review
+    bubbles1 = [_bubble_pos("q1", k, i) for i, k in enumerate("ABC")]
+    img1 = np.full((H, W, 3), 255, dtype=np.uint8)
+    _draw_bubble(img1, bubbles1[0], filled=True)
+    _draw_bubble(img1, bubbles1[1], filled=True)
+    pos1 = {
+        "page": {"w_pt": 595.28, "h_pt": 841.89},
+        "questions": [],
+        "bubbles": bubbles1,
+    }
+    q1 = read_bubbles(img1, pos1, 1)[0]
+    assert q1["checked"] == ["A", "B"] and q1["needs_review"] is True

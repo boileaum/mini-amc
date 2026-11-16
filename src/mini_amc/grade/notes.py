@@ -12,13 +12,15 @@ DETAIL_CSV = "notes_detail.csv"
 def question_point(
     checked: list,
     correction: list | None,
-    expected: str | None,
+    expected: str | list[str] | None,
     max_points: int | None = None,
 ) -> int:
     """
     Points for one question (bareme v1: no negative points).
 
-    MCQ: 1 pt if exactly one effective choice and it equals ``expected``.
+    MCQ: 1 pt if the effective checked set equals the expected set
+    (``expected`` is a list of keys — one key for single-answer, several
+    for multi-answer), 0 otherwise.
     Open question (``expected == "open"``): the graded value (the blackened
     grade box, or the manual correction), clamped to [0, ``max_points``].
 
@@ -28,7 +30,7 @@ def question_point(
     Args:
         checked: OMR-checked choice keys (MCQ) or graded value (open).
         correction: Manual correction (list) or ``None``.
-        expected: Expected key from the answer key, or ``"open"``.
+        expected: Expected keys from the answer key (list), or ``"open"``.
         max_points: Maximum points of an open question.
 
     Returns:
@@ -44,7 +46,8 @@ def question_point(
                 return 0
             return v if 0 <= v <= max_points else 0
         return 0
-    return 1 if len(effective) == 1 and effective[0] == expected else 0
+    expected_set = set(expected) if isinstance(expected, list) else {expected}
+    return 1 if set(effective) == expected_set else 0
 
 
 def _load(data: Path, name: str, default):
@@ -106,7 +109,7 @@ def compute_grades(data: Path) -> tuple[list[dict], list[dict]]:
                     "correction": "+".join(str(c) for c in correction)
                     if correction
                     else "",
-                    "expected": expected,
+                    "expected": expected if expected == "open" else "+".join(expected),
                     "point": point,
                     "needs_review": q["needs_review"] if q else False,
                 }

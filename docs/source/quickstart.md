@@ -94,7 +94,7 @@ side can show through in the scan and skew the bubble fill measurement —
 but a doubtful reading is only flagged `needs_review` for manual review,
 never silently misread.
 ```
-- Students check ONE box per MCQ; open questions are left blank during the exam.
+- Students check ONE box per single-answer MCQ (circle bubbles), several for multi-answer ones (square bubbles); open questions are left blank during the exam.
 - After the exam, **before scanning**: the teacher blackens ONE lettered grade box per open question in the gray grader area (A = 0 pt, B = 1 pt, … up to `max_points`).
 
 ## 5. Scan the copies

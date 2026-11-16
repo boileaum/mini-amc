@@ -70,9 +70,11 @@ def load_bank(path: Path) -> dict:
         if "choices" not in q:
             raise ValueError(f"question {q.get('id')}: 'choices' required")
         correct = [c for c in q["choices"] if c.get("correct")]
-        if len(correct) != 1:
+        # 1..n correct choices: 1 = single-answer MCQ, >1 = multi-answer
+        # (rendered with square bubbles)
+        if not correct:
             raise ValueError(
-                f"question {q.get('id')}: exactly 1 correct choice required in v1"
+                f"question {q.get('id')}: at least 1 correct choice required"
             )
         if len(q["choices"]) < 2:
             raise ValueError(f"question {q.get('id')}: at least 2 choices required")
@@ -197,6 +199,7 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
                 continue
             choices = rng.sample(q["choices"], len(q["choices"]))
             copy_choices = []
+            correct_keys = []
             # keys reassigned A, B, C… in shuffled order; load_bank caps
             # choices at 26, so the zip never truncates
             for c, key in zip(choices, string.ascii_uppercase, strict=False):
@@ -204,12 +207,16 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
                     {"key": key, "text": c["text"], "correct": bool(c.get("correct"))}
                 )
                 if c.get("correct"):
-                    answers[q["id"]] = key
+                    correct_keys.append(key)
+            # answers: sorted list of correct keys (a single key for
+            # single-answer MCQ, several for multi-answer)
+            answers[q["id"]] = sorted(correct_keys)
             copy_questions.append(
                 {
                     "id": q["id"],
                     "text": q["text"],
                     "type": "mcq",
+                    "multi": len(correct_keys) > 1,
                     "choices": copy_choices,
                 }
             )
@@ -329,7 +336,14 @@ def export_positions(build_dir: Path, copy_id: str) -> dict:
         },
         "questions": [_pos(m) for m in metas if m["kind"] == "question"],
         "bubbles": [
-            {**_pos(m), "key": m["key"]} for m in metas if m["kind"] == "bubble"
+            {
+                **_pos(m),
+                "key": m["key"],
+                "shape": m.get("shape", "circle"),
+                "multi": m.get("multi", False),
+            }
+            for m in metas
+            if m["kind"] == "bubble"
         ],
         "gradeboxes": [
             {**_pos(m), "value": m["value"]} for m in metas if m["kind"] == "gradebox"
