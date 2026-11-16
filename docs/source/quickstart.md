@@ -59,6 +59,14 @@ Produces in `data/`:
 
 Generation is staged: on failure, `data/` is left untouched.
 
+Preview of the example copy (`bank.example.yml`, copy `0001`, seed 42 — corner squares, per-page QR code top right, MCQ bubbles, open-question grade boxes):
+
+```{figure} _static/copy.example.png
+:alt: Example exam copy page generated from bank.example.yml
+
+Copy 0001 of the example bank
+```
+
 ## 4. Print and run the exam
 
 - Print with **no "fit to page" scaling** (it distorts the geometry).
