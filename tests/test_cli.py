@@ -64,4 +64,6 @@ def test_subcommand_help_passthrough(capsys):
     with pytest.raises(SystemExit) as exc:
         cli.main(["generate", "--help"])
     assert exc.value.code == 0
-    assert "--bank" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "usage: mini-amc generate" in out
+    assert "--bank" in out

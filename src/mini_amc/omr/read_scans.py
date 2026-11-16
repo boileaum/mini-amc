@@ -457,26 +457,32 @@ def main(argv: list[str] | None = None) -> None:
     """
     Subcommand ``mini-amc omr`` (via ``mini_amc.cli``).
 
-    Reads the scans from ``--scans`` and writes ``--out`` as
-    ``{"scans": …, "copies": …}``, plus the annotated images in
-    ``--annotated``.
+    Conventional layout: reads the scans from ``--scans`` (default
+    ``./scans``) and the whole project state from ``--data`` (default
+    ``./data``): ``positions.json`` is read from there, results are written
+    to ``omr_results.json`` as ``{"scans": …, "copies": …}`` and the
+    annotated images go to ``annotated/`` — no per-file options, one common
+    data directory per exam project.
     """
-    ap = argparse.ArgumentParser(description="OMR reading of scanned answer sheets")
+    ap = argparse.ArgumentParser(
+        prog="mini-amc omr", description="OMR reading of scanned answer sheets"
+    )
     ap.add_argument("--scans", type=Path, default=Path("scans"))
-    ap.add_argument("--positions", type=Path, default=Path("data/positions.json"))
-    ap.add_argument("--out", type=Path, default=Path("data/omr_results.json"))
-    ap.add_argument("--annotated", type=Path, default=Path("data/annotated"))
+    ap.add_argument("--data", type=Path, default=Path("data"))
     ap.add_argument("--threshold", type=float, default=THRESHOLD)
     ap.add_argument("--gray-threshold", type=float, default=GRAY_THRESHOLD)
     args = ap.parse_args(argv)
 
+    positions_path = args.data / "positions.json"
+    out_path = args.data / "omr_results.json"
+    annotated_dir = args.data / "annotated"
     if not args.scans.is_dir():
         ap.error(f"scans directory not found: {args.scans}")
-    if not args.positions.exists():
+    if not positions_path.exists():
         ap.error(
-            f"positions file not found: {args.positions} (run mini-amc generate first)"
+            f"positions file not found: {positions_path} (run mini-amc generate first)"
         )
-    positions = json.loads(args.positions.read_text(encoding="utf-8"))
+    positions = json.loads(positions_path.read_text(encoding="utf-8"))
     scans = (
         sorted(args.scans.glob("*.png"))
         + sorted(args.scans.glob("*.jpg"))
@@ -485,11 +491,11 @@ def main(argv: list[str] | None = None) -> None:
     results = {}
     for scan in scans:
         results[scan.name] = process_scan(
-            scan, positions, args.annotated, args.threshold, args.gray_threshold
+            scan, positions, annotated_dir, args.threshold, args.gray_threshold
         )
     output = {"scans": results, "copies": aggregate_copies(results, positions)}
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(
+    args.data.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(
         json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 

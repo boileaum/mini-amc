@@ -138,12 +138,8 @@ def test_main_end_to_end(tmp_path, monkeypatch):
             "mini-amc-omr",
             "--scans",
             str(scans),
-            "--positions",
-            str(tmp_path / "positions.json"),
-            "--out",
-            str(tmp_path / "omr_results.json"),
-            "--annotated",
-            str(tmp_path / "annotated"),
+            "--data",
+            str(tmp_path),
         ],
     )
     main()
@@ -194,12 +190,8 @@ def test_main_multipage_and_partial(tmp_path, monkeypatch):
             "mini-amc-omr",
             "--scans",
             str(scans),
-            "--positions",
-            str(tmp_path / "positions.json"),
-            "--out",
-            str(tmp_path / "omr_results.json"),
-            "--annotated",
-            str(tmp_path / "annotated"),
+            "--data",
+            str(tmp_path),
         ],
     )
     main()
@@ -233,10 +225,8 @@ def test_main_missing_scans_dir(tmp_path, monkeypatch):
             "mini-amc-omr",
             "--scans",
             str(tmp_path / "nope"),
-            "--positions",
-            str(tmp_path / "positions.json"),
-            "--out",
-            str(tmp_path / "r.json"),
+            "--data",
+            str(tmp_path),
         ],
     )
     with pytest.raises(SystemExit):
@@ -254,10 +244,8 @@ def test_main_missing_positions(tmp_path, monkeypatch):
             "mini-amc-omr",
             "--scans",
             str(scans),
-            "--positions",
-            str(tmp_path / "nope.json"),
-            "--out",
-            str(tmp_path / "r.json"),
+            "--data",
+            str(tmp_path),
         ],
     )
     with pytest.raises(SystemExit):

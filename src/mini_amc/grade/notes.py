@@ -165,7 +165,9 @@ def write_csvs(data: Path, notes: list[dict], detail: list[dict]) -> tuple[Path,
 
 def main(argv: list[str] | None = None) -> None:
     """Subcommand ``mini-amc grades``: compute grades, write the CSVs."""
-    ap = argparse.ArgumentParser(description="Grades (bareme v1) + CSV export")
+    ap = argparse.ArgumentParser(
+        prog="mini-amc grades", description="Grades (bareme v1) + CSV export"
+    )
     ap.add_argument("--data", type=Path, default=Path("data"))
     args = ap.parse_args(argv)
     notes, detail = compute_grades(args.data)

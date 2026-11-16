@@ -157,12 +157,8 @@ def pipeline(tmp_path_factory):
                 "mini-amc-omr",
                 "--scans",
                 str(scans),
-                "--positions",
-                str(data / "positions.json"),
-                "--out",
-                str(data / "omr_results.json"),
-                "--annotated",
-                str(data / "annotated"),
+                "--data",
+                str(data),
             ],
         )
         omr_main()

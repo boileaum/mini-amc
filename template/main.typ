@@ -35,6 +35,11 @@
   #text(12pt)[#copy.meta.course - #copy.meta.date]
   #linebreak()
   #text(12pt)[Copy no. #copy.copy_id]
+  // with --students, also print the student name on the copy
+  #if copy.at("student", default: none) != none [
+    #linebreak()
+    #text(12pt)[#copy.student]
+  ]
 ]
 
 #v(1cm)

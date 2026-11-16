@@ -351,7 +351,9 @@ def main(argv: list[str] | None = None) -> None:
     only when the whole generation succeeds: a failure leaves ``--out``
     untouched.
     """
-    ap = argparse.ArgumentParser(description="Generate QCM exam copies (Typst)")
+    ap = argparse.ArgumentParser(
+        prog="mini-amc generate", description="Generate QCM exam copies (Typst)"
+    )
     ap.add_argument("--bank", type=Path, default=Path("bank.example.yml"))
     ap.add_argument("--copies", type=int, default=10)
     ap.add_argument("--seed", type=int, default=42)

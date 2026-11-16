@@ -137,12 +137,8 @@ def test_batch_mixed_statuses(tmp_path, monkeypatch):
             "mini-amc-omr",
             "--scans",
             str(scans),
-            "--positions",
-            str(tmp_path / "positions.json"),
-            "--out",
-            str(tmp_path / "omr_results.json"),
-            "--annotated",
-            str(tmp_path / "annotated"),
+            "--data",
+            str(tmp_path),
         ],
     )
     main()
