@@ -11,7 +11,7 @@
 
 ## Copy generation
 
-- [ ] `mini-amc generate --bank <bank.yml> --copies N --seed S --out data` (or `mini-amc generate …`)
+- [ ] `mini-amc generate --bank <bank.yml> --copies N --seed S` (all commands use the conventional `./data` and `./scans`)
 - [ ] optional: add `--students students.csv` to link copies to student names — stays local, never committed. Simple format `copy_id,name`, or a Moodle export with `--students-id-column "Numéro étudiant" --students-name-columns "Prénom,Nom"` (delimiter auto-detected, other columns ignored, e.g. students.moodle.example.csv). Row count must equal `--copies`; the link column values become the copy ids (printed as "Copy no." and in the QR)
 - [ ] check the presence of `data/copy_XXXX.pdf`, `data/copy_XXXX.json`, `data/positions.json`, `data/answers.json` (and `data/students.json` if `--students`)
 - [ ] every PDF page carries 4 black corner squares + 1 QR code at the top right (`copy:XXXX|page:N`)
@@ -38,7 +38,7 @@
 
 ## OMR
 
-- [ ] `mini-amc omr --scans scans --positions data/positions.json --out data/omr_results.json`
+- [ ] `mini-amc omr` (reads `scans/`, writes `data/omr_results.json` + `data/annotated/`)
 - [ ] review `data/omr_results.json` (section `copies`): any copy with status `needs_review`, `partial` (missing page) or `unread` goes to manual review
 - [ ] the straightened and annotated scans (markers, QR, bubbles) are in `data/annotated/` for visual checking
 
@@ -51,7 +51,7 @@
 
 ## Grades
 
-- [ ] `mini-amc grades --data data` (bareme v1: 1 pt per correct answer, manual corrections override the OMR reading)
+- [ ] `mini-amc grades` (bareme v1: 1 pt per correct answer, manual corrections override the OMR reading)
 - [ ] export check: `data/notes.csv` (one row per copy: `copy_id,student,status,score,score_max`) and `data/notes_detail.csv` (one row per copy/question: `copy_id,qid,type,page,checked,correction,expected,point,needs_review`)
 - [ ] local archiving: `data/` and `scans/` stay on the machine, never in the cloud
 
