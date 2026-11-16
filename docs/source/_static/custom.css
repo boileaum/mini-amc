@@ -1,12 +1,13 @@
-/* Mermaid diagrams: render at natural size (driven by the mermaid fontSize),
-   only capped to the column width. The extension's own CSS forces
-   svg { width: 100%; height: 500px }, which stretched every diagram to the
-   full column and made the font size ineffective. */
+/* Mermaid diagrams: the extension's own CSS forces svg { width: 100%;
+   height: 500px } on the full column, which made diagrams ~2.5x too zoomed.
+   Render the diagram at 40% of the column width instead (height follows the
+   aspect ratio), still capped to the column. */
 pre.mermaid {
-  width: auto;
+  width: 40%;
+  min-width: 300px;
 }
 pre.mermaid > svg {
-  width: auto !important;
+  width: 100% !important;
   height: auto !important;
   max-width: 100% !important;
 }
