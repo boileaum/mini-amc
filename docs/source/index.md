@@ -1,15 +1,11 @@
-# mini-amc docs
+# mini-amc documentation
 
-```{eval-rst}
-.. include:: ../../README.md
-   :parser: myst_parser.sphinx_
-```
-
----
+A mini-clone of Auto-Multiple-Choice (AMC) based on [Typst](https://typst.app) — everything is 100% local: student scans never leave the machine.
 
 ```{toctree}
 :maxdepth: 2
 
+readme.md
 quickstart.md
 runbook.md
 api.md
