@@ -31,7 +31,8 @@ mermaid_init_config = {
 }
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "_autosummary"]
+# _autosummary (autosummary stubs) must stay readable: it is only gitignored
+exclude_patterns = ["_build"]
 
 autodoc_default_options = {
     "members": True,
