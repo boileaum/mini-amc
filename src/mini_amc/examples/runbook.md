@@ -1,6 +1,6 @@
 # Runbook - exam day
 
-Checklist for exam day. Steps 1-8 match the pipeline diagram (README) and the quickstart sections; explanations and options are in the [quickstart](https://boileaum.github.io/mini-amc/quickstart.html).
+Checklist for exam day. Steps 1-8 match the pipeline diagram (README) and the quickstart headings; explanations and options are in the [quickstart](https://boileaum.github.io/mini-amc/quickstart.html).
 
 | Step | Action | Command | Produces |
 | --- | --- | --- | --- |
@@ -19,19 +19,19 @@ Checklist for exam day. Steps 1-8 match the pipeline diagram (README) and the qu
 - [ ] up-to-date environment: `uv sync --all-groups` (committed `uv.lock`)
 - [ ] `typst --version` → `typst 0.15.1`
 - [ ] finalized question bank (`bank.example.yml`): at least 1 `correct: true` per MCQ, at least 2 choices
-- [ ] layout checked on one copy: `mini-amc preview --png` (or `--watch` while editing) - quickstart §3
+- [ ] layout checked on one copy: `mini-amc preview --png` (or `--watch` while editing) - quickstart, Step 1
 - [ ] `scans/` empty; previous `data/` archived if reusing the folder
 
 ## Step 1: Copy generation
 
 - [ ] `mini-amc generate --bank <bank.yml> --copies N --seed S` (conventional `./data` and `./scans`)
-- [ ] optional `--students students.csv` to link copies to student names (quickstart §2): simple `copy_id,name`, or a Moodle export with `--students-id-column` / `--students-name-columns`; row count must equal `--copies`
+- [ ] optional `--students students.csv` to link copies to student names (quickstart, Setup): simple `copy_id,name`, or a Moodle export with `--students-id-column` / `--students-name-columns`; row count must equal `--copies`
 - [ ] check `data/copy_XXXX.pdf`, `copy_XXXX.json`, `positions.json`, `answers.json` (and `students.json` if `--students`)
 - [ ] every PDF page carries 4 black corner squares + 1 QR code top right (`copy:XXXX|page:N`)
 
 ## Step 2: Printing
 
-- [ ] print the N copies, no "fit to page" scaling (single-sided recommended, not mandatory - quickstart §4)
+- [ ] print the N copies, no "fit to page" scaling (single-sided recommended, not mandatory - quickstart, Steps 2-4)
 - [ ] on a test copy: corner squares well printed, QR sharp, bubbles not masked
 
 ## Step 3: Exam

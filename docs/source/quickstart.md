@@ -1,8 +1,8 @@
 # Quickstart
 
-End-to-end usage of mini-amc: from a YAML question bank to CSV grades. All data stays local (student scans never leave the machine; `data/` and `scans/` are gitignored). Sections 1-2 are the setup; sections 3-8 follow the numbered steps of the pipeline diagram in the README (1 generate … 8 grades), also referenced in the runbook.
+End-to-end usage of mini-amc: from a YAML question bank to CSV grades. All data stays local (student scans never leave the machine; `data/` and `scans/` are gitignored). The two setup sections come first; the rest follows the pipeline steps 1-8 of the README diagram (1 generate … 8 grades), with the same numbers as the runbook.
 
-## 1. Install
+## Setup: install
 
 Requires Python >= 3.12, [uv](https://docs.astral.sh/uv/), and the Typst CLI pinned to v0.15.1:
 
@@ -15,7 +15,7 @@ sudo mv /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
 typst --version         # -> typst 0.15.1
 ```
 
-## 2. Prepare the question bank
+## Setup: question bank and students
 
 Start from the example files - `mini-amc init` copies them into the exam folder (`bank.example.yml`, `students.example.csv`, `students.moodle.example.csv`, `runbook.md`) and writes a `.gitignore` (`data/`, `scans/`, `preview/`, `.venv/`, …) so that if you track the exam folder with git, the local data (student scans, grades) is never committed:
 
@@ -62,7 +62,7 @@ mini-amc generate --bank bank.yml --copies 30 --seed 42 --students moodle.csv \
   --students-id-column "Numéro étudiant" --students-name-columns "Prénom,Nom"
 ```
 
-## 3. Generate the copies (step 1)
+## Step 1: Generate the copies
 
 While writing the bank, check the layout on a single copy (never touches `./data`, output goes to the gitignored `./preview/`):
 
@@ -96,7 +96,7 @@ Preview of the example copy (`bank.example.yml`, `students.example.csv`, copy `0
 Copy 0001 of the example bank (page 1)
 ```
 
-## 4. Print and run the exam (steps 2-4)
+## Steps 2-4: Print, exam, manual grading
 
 - Print with **no "fit to page" scaling** (it distorts the geometry).
 - Check on a test copy: the 4 black corner squares and the QR code (top right) are well printed.
@@ -110,7 +110,7 @@ never silently misread.
 - Students check ONE box per single-answer MCQ (circle bubbles), several for multi-answer ones (square bubbles); open questions are left blank during the exam.
 - After the exam, **before scanning**: the teacher blackens ONE lettered grade box per open question in the gray grader area (A = 0 pt, B = 1 pt, … up to `max_points`).
 
-## 5. Scan the copies (step 5)
+## Step 5: Scan the copies
 
 Put the scans in `scans/`, one file per page:
 
@@ -120,7 +120,7 @@ Put the scans in `scans/`, one file per page:
 - **the 4 black corner squares and the QR code (top right) must be fully visible** on every scan - a cropped corner or QR makes the page `unread`;
 - avoid shadows and glare over the bubbles; no "fit to page" rescaling beyond the printer's own output.
 
-## 6. OMR reading (step 6)
+## Step 6: OMR reading
 
 ```bash
 mini-amc omr    # reads scans/, writes data/omr_results.json + data/annotated/
@@ -128,13 +128,13 @@ mini-amc omr    # reads scans/, writes data/omr_results.json + data/annotated/
 
 Each scan gets a status: `ok` / `needs_review` (ambiguous bubbles, ungraded open question) / `unread` (unreadable). Results are aggregated per copy in `omr_results.json` (`copies` section, multi-page: `ok` / `needs_review` / `partial` / `unread`), with straightened + annotated scans in `data/annotated/`.
 
-## 7. Review (web UI) (step 7)
+## Step 7: Review (web UI)
 
 ```bash
 mini-amc web --reload    # -> http://127.0.0.1:8000/copies (reads ./data; override with --data DIR)
+```
 
 All commands work on the conventional `data/` directory of the current project - one common name for all exams, no per-file paths to manage (`generate`/`grades` accept `--data`/`--out`, `omr` defaults to `data/…`, `web` reads `./data` or `$MINI_AMC_DATA`).
-```
 
 JSON API (interactive docs at `/docs`):
 
@@ -143,7 +143,7 @@ JSON API (interactive docs at `/docs`):
 - `GET /copy/{copy_id}/scan/{page}` - annotated scan image of the page
 - `POST /copy/{copy_id}/correction` - `{"qid": "q1", "checked": ["B"]}` for an MCQ, `{"qid": "q5", "checked": [2]}` to override a misread grade box of an open question (empty list clears); saved to `data/corrections.json`, score recomputed. Open questions are normally graded on paper before scanning; an ungraded one shows `needs_review`.
 
-## 8. Grades (step 8)
+## Step 8: Grades
 
 ```bash
 mini-amc grades
