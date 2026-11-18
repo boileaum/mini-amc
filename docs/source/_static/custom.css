@@ -1,6 +1,6 @@
 /* Mermaid diagrams are narrower than the column (mermaid_width): center them,
    and let the d3-zoom pan horizontally instead of clipping the sides.
-   (margin/overflow only — the extension's inline style sets width, not these,
+   (margin/overflow only - the extension's inline style sets width, not these,
    so no cascade conflict here) */
 pre.mermaid {
   margin-left: auto;

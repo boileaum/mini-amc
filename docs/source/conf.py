@@ -22,7 +22,7 @@ myst_enable_extensions = ["tasklist"]
 myst_fence_as_directive = ["mermaid"]
 
 # Mermaid sizing, via the extension's own knobs (its inline <style> comes after
-# html_css_files in the <head>, so custom.css cannot override it — use
+# html_css_files in the <head>, so custom.css cannot override it - use
 # mermaid_width/mermaid_height instead): the defaults stretched every diagram
 # to the full column (width 100%) in a 500px box, i.e. ~2.5x too zoomed.
 # Render at 30% of the column, natural height, with pan/zoom.

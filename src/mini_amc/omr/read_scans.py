@@ -18,7 +18,7 @@ CORNER_CM = 0.7
 MARKER_CENTER_PT = (CORNER_CM + MARKER_SIZE_CM / 2) * CM_TO_PT
 BUBBLE_R_PT = 4.5
 # metadata sits at the top-left of the box(circle(...)); the circle center is
-# +radius in x and +3pt in y — offsets calibrated against rendered PNGs
+# +radius in x and +3pt in y - offsets calibrated against rendered PNGs
 BUBBLE_DX_PT = BUBBLE_R_PT
 BUBBLE_DY_PT = 3.0
 # multi-answer questions use a 9pt square instead of the circle; its center is
@@ -488,7 +488,7 @@ def main(argv: list[str] | None = None) -> None:
     ``./scans``) and the whole project state from ``--data`` (default
     ``./data``): ``positions.json`` is read from there, results are written
     to ``omr_results.json`` as ``{"scans": …, "copies": …}`` and the
-    annotated images go to ``annotated/`` — no per-file options, one common
+    annotated images go to ``annotated/`` - no per-file options, one common
     data directory per exam project.
     """
     ap = argparse.ArgumentParser(

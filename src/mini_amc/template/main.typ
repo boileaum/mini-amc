@@ -56,7 +56,7 @@
       #v(0.2cm)
       // grader area, AMC-style: gray background so the grade boxes are
       // visually distinct from the student bubbles; letter labels (A, B, …)
-      // instead of numbers so they don't suggest a scale — the numeric value
+      // instead of numbers so they don't suggest a scale - the numeric value
       // stays in the #metadata, which is what the OMR reads
       #box(fill: luma(235), inset: 0.3em)[
         #for v in range(0, q.max_points + 1) [

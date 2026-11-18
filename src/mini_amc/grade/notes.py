@@ -64,9 +64,9 @@ def question_point(
     Points for one question under a named grading scheme.
 
     MCQ: the scheme function from ``BAREMES`` (``expected`` is a list of
-    keys — one for single-answer, several for multi-answer).
+    keys - one for single-answer, several for multi-answer).
     Open question (``expected == "open"``): the graded value (the blackened
-    grade box, or the manual correction), clamped to [0, ``max_points``] —
+    grade box, or the manual correction), clamped to [0, ``max_points``] -
     identical for all schemes.
 
     The effective answer is the manual correction if present, else the

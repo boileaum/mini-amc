@@ -17,7 +17,7 @@ typst --version         # -> typst 0.15.1
 
 ## 2. Prepare the question bank
 
-Start from the example files — `mini-amc init` copies them into the exam folder (`bank.example.yml`, `students.example.csv`, `students.moodle.example.csv`, `runbook.md`) and writes a `.gitignore` (`data/`, `scans/`, `preview/`, `.venv/`, …) so that if you track the exam folder with git, the local data (student scans, grades) is never committed:
+Start from the example files - `mini-amc init` copies them into the exam folder (`bank.example.yml`, `students.example.csv`, `students.moodle.example.csv`, `runbook.md`) and writes a `.gitignore` (`data/`, `scans/`, `preview/`, `.venv/`, …) so that if you track the exam folder with git, the local data (student scans, grades) is never committed:
 
 ```bash
 mkdir my-exam && cd my-exam && mini-amc init .
@@ -40,7 +40,7 @@ questions:
     max_points: 2
 ```
 
-Question and choice texts are parsed as Typst markup, so you can use math (`$E = m c^2$`) and fenced code blocks (```` ```python ... ``` ````) directly in the YAML — mind Typst math syntax (single letters are variables, `m c^2` not `mc^2`).
+Question and choice texts are parsed as Typst markup, so you can use math (`$E = m c^2$`) and fenced code blocks (```` ```python ... ``` ````) directly in the YAML - mind Typst math syntax (single letters are variables, `m c^2` not `mc^2`).
 
 Optionally, a nominative CSV links copy ids to students. Example files (copied by `mini-amc init`): [`students.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.example.csv) and [`students.moodle.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.moodle.example.csv):
 
@@ -71,7 +71,7 @@ mini-amc preview --bank bank.example.yml            # preview/copy_0001.pdf
 mini-amc preview --png                               # + preview/page-N.png
 mini-amc preview --watch                             # re-render on change (typst watch);
                                                      # regenerates copy.json if the bank changes
-# fallback: the build dir is self-contained — plain typst works there too
+# fallback: the build dir is self-contained - plain typst works there too
 cd preview/build/0001 && typst compile main.typ out.pdf   # or: typst watch main.typ out.pdf
 ```
 
@@ -88,7 +88,7 @@ Produces in `data/`:
 
 Generation is staged: on failure, `data/` is left untouched.
 
-Preview of the example copy (`bank.example.yml`, `students.example.csv`, copy `0001` « Alice Martin », seed 42 — corner squares, per-page QR code top right, student name in the header, MCQ bubbles with a math formula in q3, gray grader area with lettered grade boxes A/B/C for the open question):
+Preview of the example copy (`bank.example.yml`, `students.example.csv`, copy `0001` « Alice Martin », seed 42 - corner squares, per-page QR code top right, student name in the header, MCQ bubbles with a math formula in q3, gray grader area with lettered grade boxes A/B/C for the open question):
 
 ```{figure} _static/copy.example.png
 :alt: Example exam copy page generated from bank.example.yml with a fictitious student name
@@ -103,7 +103,7 @@ Copy 0001 of the example bank (page 1)
 
 ```{note}
 Single-sided printing is recommended, not required: ink from the reverse
-side can show through in the scan and skew the bubble fill measurement —
+side can show through in the scan and skew the bubble fill measurement -
 but a doubtful reading is only flagged `needs_review` for manual review,
 never silently misread.
 ```
@@ -117,7 +117,7 @@ Put the scans in `scans/`, one file per page:
 - **150-300 dpi**, PNG or JPG (avoid heavy JPEG compression on the QR code);
 - **grayscale or color** both work (the OMR thresholds on darkness); avoid 1-bit black & white mode if it degrades the corner squares or the QR code;
 - page preferably upright (the OMR straightens it anyway via the 4 corner squares, but a near-upright scan is more reliable);
-- **the 4 black corner squares and the QR code (top right) must be fully visible** on every scan — a cropped corner or QR makes the page `unread`;
+- **the 4 black corner squares and the QR code (top right) must be fully visible** on every scan - a cropped corner or QR makes the page `unread`;
 - avoid shadows and glare over the bubbles; no "fit to page" rescaling beyond the printer's own output.
 
 ## 6. OMR reading (step 6)
@@ -133,15 +133,15 @@ Each scan gets a status: `ok` / `needs_review` (ambiguous bubbles, ungraded open
 ```bash
 mini-amc web --reload    # -> http://127.0.0.1:8000/copies (reads ./data; override with --data DIR)
 
-All commands work on the conventional `data/` directory of the current project — one common name for all exams, no per-file paths to manage (`generate`/`grades` accept `--data`/`--out`, `omr` defaults to `data/…`, `web` reads `./data` or `$MINI_AMC_DATA`).
+All commands work on the conventional `data/` directory of the current project - one common name for all exams, no per-file paths to manage (`generate`/`grades` accept `--data`/`--out`, `omr` defaults to `data/…`, `web` reads `./data` or `$MINI_AMC_DATA`).
 ```
 
 JSON API (interactive docs at `/docs`):
 
-- `GET /copies` — all copies with status, pages/questions read, corrections count, student name
-- `GET /copy/{copy_id}` — per question: detected choices (`checked`, `fills`, `needs_review`), expected answer, ongoing correction, current score
-- `GET /copy/{copy_id}/scan/{page}` — annotated scan image of the page
-- `POST /copy/{copy_id}/correction` — `{"qid": "q1", "checked": ["B"]}` for an MCQ, `{"qid": "q5", "checked": [2]}` to override a misread grade box of an open question (empty list clears); saved to `data/corrections.json`, score recomputed. Open questions are normally graded on paper before scanning; an ungraded one shows `needs_review`.
+- `GET /copies` - all copies with status, pages/questions read, corrections count, student name
+- `GET /copy/{copy_id}` - per question: detected choices (`checked`, `fills`, `needs_review`), expected answer, ongoing correction, current score
+- `GET /copy/{copy_id}/scan/{page}` - annotated scan image of the page
+- `POST /copy/{copy_id}/correction` - `{"qid": "q1", "checked": ["B"]}` for an MCQ, `{"qid": "q5", "checked": [2]}` to override a misread grade box of an open question (empty list clears); saved to `data/corrections.json`, score recomputed. Open questions are normally graded on paper before scanning; an ungraded one shows `needs_review`.
 
 ## 8. Grades (step 8)
 

@@ -16,7 +16,7 @@ A mini-clone of [Auto-Multiple-Choice](https://www.auto-multiple-choice.net) (AM
 - **Print one personalized PDF copy per student** (questions and choices shuffled differently on each copy)
 - **Scan the returned copies**: answers are **read automatically (OMR)**, doubtful or ambiguous cases are flagged for review
 - **Review doubtful copies** in a local web UI and correct them there, with the annotated scan next to the detected answers
-- **Export the grades as CSV** (per copy with the student name, and per question), ready to import into your gradebook — Moodle-export friendly
+- **Export the grades as CSV** (per copy with the student name, and per question), ready to import into your gradebook - Moodle-export friendly
 
 ## Components
 
