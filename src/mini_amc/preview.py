@@ -110,7 +110,12 @@ def main(argv: list[str] | None = None) -> None:
         prog="mini-amc preview",
         description="Render a single copy to check the layout (no ./data touched)",
     )
-    ap.add_argument("--bank", type=Path, default=Path("bank.example.yml"))
+    ap.add_argument(
+        "--bank",
+        type=Path,
+        default=Path("bank.example.yml"),
+        help="question bank: YAML (.yml) or Typst subject (.typ)",
+    )
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", type=Path, default=Path("preview"))
     ap.add_argument("--template", type=Path, default=None)

@@ -12,7 +12,7 @@ A mini-clone of [Auto-Multiple-Choice](https://www.auto-multiple-choice.net) (AM
 ## Features
 
 - **Everything is local**: exam papers, student scans and grades never leave your machine
-- **Write the exam once** as a YAML question bank: MCQ (single-answer or multi-answer) + open questions you grade on the paper copy (blacken one lettered box in the gray grader area)
+- **Write the exam once**, in a YAML question bank or directly in Typst with the `amc.typ` prelude: MCQ (single-answer or multi-answer) + open questions you grade on the paper copy (blacken one lettered box in the gray grader area)
 - **Print one personalized PDF copy per student** (questions and choices shuffled differently on each copy)
 - **Scan the returned copies**: answers are **read automatically (OMR)**, doubtful or ambiguous cases are flagged for review
 - **Review doubtful copies** in a local web UI and correct them there, with the annotated scan next to the detected answers

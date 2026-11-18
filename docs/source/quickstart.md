@@ -42,6 +42,39 @@ questions:
 
 Question and choice texts are parsed as Typst markup, so you can use math (`$E = m c^2$`) and fenced code blocks (```` ```python ... ``` ````) directly in the YAML - mind Typst math syntax (single letters are variables, `m c^2` not `mc^2`).
 
+### Or write the subject in Typst
+
+`mini-amc init` also copies `amc.typ`, a small prelude that turns the subject
+itself into the bank: same questions, same `--bank` flag, only the file suffix
+changes.
+
+```typst
+#import "amc.typ": exam, question, choice
+
+#show: exam.with(title: "Demo exam", course: "Demo 101", date: "2026-11-12")
+
+#question(id: "q1", text: "What is the capital of France?")[
+  #choice("Paris", correct: true)
+  #choice("Lyon")
+  #choice("Marseille")
+]
+
+#question(id: "q5", type: "open", max-points: 2, text: "Briefly explain the French Revolution.")[]
+```
+
+```bash
+mini-amc generate --bank subject.example.typ --copies 30 --seed 42
+typst watch subject.example.typ subject.pdf    # live preview while writing
+```
+
+`#exam`, `#question` and `#choice` emit `#metadata`; `mini-amc` runs
+`typst eval` on the file and rebuilds the bank from those entries, so the
+subject you write and the copies the students get never drift apart. Texts are
+markup strings, exactly like in the YAML. The complete example ships as
+[`subject.example.typ`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/subject.example.typ),
+next to
+[`amc.typ`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/amc.typ).
+
 Optionally, a nominative CSV links copy ids to students. Example files (copied by `mini-amc init`): [`students.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.example.csv) and [`students.moodle.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.moodle.example.csv):
 
 ```{literalinclude} ../../src/mini_amc/examples/students.example.csv

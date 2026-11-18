@@ -36,13 +36,100 @@ CM_TO_PT = 72 / 2.54
 
 def load_bank(path: Path) -> dict:
     """
-    Load and validate a YAML question bank.
+    Load and validate a question bank.
+
+    The format follows the file suffix: YAML (``bank.example.yml``) or a
+    Typst subject written with the ``amc.typ`` prelude (``subject.typ``).
+    An invalid bank raises ``ValueError`` (empty bank, duplicate/missing ids,
+    an MCQ question without a ``correct`` choice or with a choice count
+    outside [2, 26], an open question with invalid ``max_points`` or with
+    ``choices``); a ``.typ`` subject that fails to evaluate raises
+    ``RuntimeError``.
 
     Args:
-        path: Bank file path (e.g. ``bank.example.yml``).
+        path: Bank file path (``.yml``/``.yaml`` or ``.typ``).
 
     Returns:
         The parsed bank (dict with ``meta`` and ``questions``).
+    """
+    if path.suffix.lower() == ".typ":
+        data = load_bank_from_typ(path)
+    else:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    validate_bank(data)
+    return data
+
+
+def load_bank_from_typ(path: Path) -> dict:
+    """
+    Read a Typst subject (``amc.typ`` prelude) back into a question bank.
+
+    Runs ``typst eval 'query(metadata).map(it => it.value)'`` in the subject's
+    directory, so its ``#import "amc.typ": …`` resolves, then rebuilds the
+    bank from the emitted entries: the ``meta`` entry carries the header, and
+    each ``question`` entry is followed by its ``choice`` entries in document
+    order (that order is what attaches a choice to its question).
+
+    Args:
+        path: Subject file (e.g. ``subject.example.typ``).
+
+    Returns:
+        The bank (dict with ``meta`` and ``questions``), not yet validated.
+
+    Raises:
+        RuntimeError: ``typst`` missing from PATH or the subject fails to
+            evaluate (a bad ``#question`` call, a missing ``amc.typ``, …).
+        ValueError: A ``#choice`` outside a multiple-choice ``#question``, or
+            a subject without any ``#question``.
+    """
+    typst = _require_typst()
+    subject = path.resolve()
+    proc = subprocess.run(
+        [typst, "eval", "query(metadata).map(it => it.value)", "--in", subject.name],
+        cwd=subject.parent,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"typst eval failed for subject {subject.name}:\n{proc.stderr}"
+        )
+    meta: dict = {}
+    questions: list[dict] = []
+    for entry in json.loads(proc.stdout):
+        kind = entry.get("kind")
+        if kind == "meta":
+            meta = {k: entry[k] for k in ("title", "course", "date") if k in entry}
+        elif kind == "question":
+            question: dict = {"id": entry.get("id"), "text": entry.get("text", "")}
+            if entry.get("type", "mcq") == "open":
+                question["type"] = "open"
+                question["max_points"] = entry.get("max_points")
+            else:
+                question["choices"] = []
+            questions.append(question)
+        elif kind == "choice":
+            if not questions or "choices" not in questions[-1]:
+                raise ValueError(
+                    f"{subject.name}: #choice outside a multiple-choice #question"
+                )
+            questions[-1]["choices"].append(
+                {
+                    "text": entry.get("text", ""),
+                    "correct": bool(entry.get("correct", False)),
+                }
+            )
+    if not questions:
+        raise ValueError(f"{subject.name}: no #question found")
+    return {"meta": meta, "questions": questions}
+
+
+def validate_bank(data: dict) -> None:
+    """
+    Check a bank against the rules the template and the OMR rely on.
+
+    Args:
+        data: Bank dict (``meta`` + ``questions``), from YAML or a subject.
 
     Raises:
         ValueError: Empty bank, duplicate/missing ids, an MCQ question
@@ -50,7 +137,6 @@ def load_bank(path: Path) -> dict:
             outside [2, 26], or an open question with invalid
             ``max_points`` / with ``choices``.
     """
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
     questions = data.get("questions", [])
     if not questions:
         raise ValueError("empty bank: no questions")
@@ -92,7 +178,6 @@ def load_bank(path: Path) -> dict:
             raise ValueError(f"question {q.get('id')}: at least 2 choices required")
         if len(q["choices"]) > len(string.ascii_uppercase):
             raise ValueError(f"question {q.get('id')}: at most 26 choices (keys A-Z)")
-    return data
 
 
 def load_students(
@@ -380,7 +465,12 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(
         prog="mini-amc generate", description="Generate QCM exam copies (Typst)"
     )
-    ap.add_argument("--bank", type=Path, default=Path("bank.example.yml"))
+    ap.add_argument(
+        "--bank",
+        type=Path,
+        default=Path("bank.example.yml"),
+        help="question bank: YAML (.yml) or Typst subject (.typ)",
+    )
     ap.add_argument("--copies", type=int, default=10)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument(

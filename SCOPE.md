@@ -7,6 +7,7 @@ The whole project is in English: code, docstrings, comments, documentation, CLI 
 
 Included:
 
+- Question bank in YAML (``bank.example.yml``) or written directly in Typst with the ``amc.typ`` prelude: ``#exam``/``#question``/``#choice`` emit ``#metadata``, which ``typst eval`` reads back into the same bank structure, so both authoring paths feed the same pipeline and the rendering template is unchanged.
 - MCQ, single-answer (circle bubbles) or multi-answer (square bubbles, several `correct: true` choices): 1 pt iff the checked set equals the expected set.
 - Open (free-text) questions graded by the teacher on the paper copy, before scanning: the copy shows a free area + a gray grader area with lettered grade boxes A, B, … (box value = letter index, 0..max_points); the OMR reads the blackened box and the score is its value; ungraded (no box) → `needs_review`, still correctable in the review UI.
 - Named grading schemes (``BAREMES`` in `grade/notes.py`), chosen per exam in ``data/config.json`` (written by `generate`, default ``v1``), overridable with ``--bareme`` on `grades`/`web`: ``v1`` = 1 pt iff the checked set equals the expected set, else 0; ``amc`` = +1 per correct checked, -1 per wrong checked, floored at 0 per question. Open questions score their box value (0..max_points) under all schemes. ``notes.csv`` has a ``bareme`` column.
@@ -47,6 +48,8 @@ The rollout backlog (nominative CSV link, grader-blackened free-text fields) is 
 | File | Role | Produced by |
 | --- | --- | --- |
 | `src/mini_amc/examples/bank.example.yml` | Question bank (example, copied by `mini-amc init`): MCQ (`choices` + one `correct`) and open questions (`type: open`, `max_points`) | manual input |
+| `src/mini_amc/examples/amc.typ` | Subject prelude (copied by `mini-amc init`): `#exam`, `#question`, `#choice` emit `#metadata` (header, question, choice) and render the subject | manual input |
+| `src/mini_amc/examples/subject.example.typ` | Example subject written with the prelude (same questions as the YAML example); `--bank subject.typ` reads it back | manual input |
 | `src/mini_amc/examples/students.example.csv` | Nominative list (example), header `copy_id,name` | manual input |
 | `src/mini_amc/examples/students.moodle.example.csv` | Moodle-style export (example): `;`-separated, link column `Numéro étudiant` | Moodle/LMS export |
 | `data/copy_XXXX.json` | One copy: shuffled questions/choices, keys A/B/C… | `gen/generate.py` |

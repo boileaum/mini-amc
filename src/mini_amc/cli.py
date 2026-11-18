@@ -12,7 +12,7 @@ from mini_amc.grade.notes import BAREMES
 _COMMANDS = {
     "init": (
         "mini_amc.scaffold",
-        "Create an exam project dir with the example files (bank, CSVs, runbook)",
+        "Create an exam project dir with the example files (bank or subject)",
     ),
     "preview": (
         "mini_amc.preview",

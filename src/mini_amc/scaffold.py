@@ -8,6 +8,8 @@ EXAMPLES_DIR = Path(__file__).resolve().parent / "examples"
 
 EXAMPLE_FILES = [
     "bank.example.yml",
+    "amc.typ",
+    "subject.example.typ",
     "students.example.csv",
     "students.moodle.example.csv",
     "runbook.md",
@@ -21,7 +23,10 @@ DOT_FILES = {
 
 def init_project(directory: Path, force: bool = False) -> list[Path]:
     """
-    Copy the example files (bank, students CSVs, runbook) into a project dir.
+    Copy the example files into a project dir.
+
+    That is the YAML bank, the Typst subject prelude (``amc.typ``) with its
+    example subject, the students CSVs and the runbook.
 
     Also writes a ``.gitignore`` (from ``gitignore.example``) so local data
     (``data/``, ``scans/``, ``preview/``) is never committed when the exam
@@ -55,9 +60,9 @@ def main(argv: list[str] | None = None) -> None:
     Subcommand ``mini-amc init`` (via ``mini_amc.cli``).
 
     Creates an exam project directory with the example files:
-    ``bank.example.yml``, ``students.example.csv``,
-    ``students.moodle.example.csv``, ``runbook.md`` and a ``.gitignore``
-    (local data never committed).
+    ``bank.example.yml``, ``amc.typ``, ``subject.example.typ``,
+    ``students.example.csv``, ``students.moodle.example.csv``,
+    ``runbook.md`` and a ``.gitignore`` (local data never committed).
 
     Args:
         argv: Command line arguments (defaults to ``sys.argv[1:]``).
