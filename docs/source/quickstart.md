@@ -40,6 +40,8 @@ questions:
     max_points: 2
 ```
 
+Question and choice texts are parsed as Typst markup, so you can use math (`$E = m c^2$`) and fenced code blocks (```` ```python ... ``` ````) directly in the YAML — mind Typst math syntax (single letters are variables, `m c^2` not `mc^2`).
+
 Optionally, a nominative CSV links copy ids to students. Example files (copied by `mini-amc init`): [`students.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.example.csv) and [`students.moodle.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.moodle.example.csv):
 
 ```{literalinclude} ../../src/mini_amc/examples/students.example.csv
@@ -110,7 +112,12 @@ never silently misread.
 
 ## 5. Scan the copies
 
-Put the scans in `scans/` (PNG or JPG, 150-300 dpi, page preferably upright). The 4 corners and the QR code must be visible on every scan.
+Put the scans in `scans/`, one file per page:
+
+- **150-300 dpi**, PNG or JPG (avoid heavy JPEG compression on the QR code);
+- page preferably upright (the OMR straightens it anyway via the 4 corner squares, but a near-upright scan is more reliable);
+- **the 4 black corner squares and the QR code (top right) must be fully visible** on every scan — a cropped corner or QR makes the page `unread`;
+- avoid shadows and glare over the bubbles; no "fit to page" rescaling beyond the printer's own output.
 
 ## 6. OMR reading
 

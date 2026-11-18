@@ -47,7 +47,9 @@
 #for q in copy.questions [
   #block(breakable: false)[
     #context [#metadata((kind: "question", copy: copy.copy_id, qid: q.id, page: here().page(), x: here().position().x, y: here().position().y))]
-    #text(weight: "bold")[#q.id - #q.text]
+    // eval(mode: "markup"): the bank text is parsed as Typst markup, so
+    // $…$ math and ``` code fences in the YAML render properly
+    #text(weight: "bold")[#q.id - #eval(q.text, mode: "markup")]
     // .at(default:) keeps hand-written copy.json files (without "type") working
     #if q.at("type", default: "mcq") == "open" [
       #block(width: 100%, height: 3cm, stroke: 0.5pt)
@@ -75,7 +77,7 @@
           #h(0.4em)
           // no letter printed on the student copy: the key stays in the
           // #metadata (OMR) and in copy_XXXX.json / answers.json
-          #c.text
+          #eval(c.text, mode: "markup")
         ]
       ]
     ]

@@ -36,16 +36,17 @@ flowchart TD
   classDef data fill:#d1ecf1,stroke:#0c5460
 
   bank["bank.yml + students.csv"]:::data
-  bank --> gen("mini-amc generate"):::tool
+  bank --> gen("1 · mini-amc generate"):::tool
   gen --> pdf["data/copy_XXXX.pdf"]:::data
-  pdf --> print("Print"):::tool
-  print --> exam(["EXAM<br/>students answer on paper"]):::exam
-  exam --> manual(["Manual grading<br/>on paper (optional)"]):::exam
-  manual --> scans["scans/"]:::data
-  scans --> omr("mini-amc omr"):::tool
+  pdf --> print("2 · Print"):::tool
+  print --> exam(["3 · EXAM<br/>students answer on paper"]):::exam
+  exam --> manual(["4 · Manual grading<br/>on paper (optional)"]):::exam
+  manual --> scan("5 · Scan<br/>150-300 dpi, PNG/JPG<br/>corners + QR visible"):::tool
+  scan --> scans["scans/"]:::data
+  scans --> omr("6 · mini-amc omr"):::tool
   omr --> res["data/omr_results.json + annotated/"]:::data
-  res --> web("mini-amc web (review UI)"):::tool
-  res --> grades("mini-amc grades"):::tool
+  res --> web("7 · mini-amc web (review UI)"):::tool
+  res --> grades("8 · mini-amc grades"):::tool
   web --> corr["data/corrections.json"]:::data
   corr --> grades
   grades --> notes["data/notes.csv + notes_detail.csv"]:::data

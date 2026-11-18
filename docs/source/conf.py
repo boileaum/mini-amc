@@ -43,5 +43,11 @@ autodoc_default_options = {
 language = "en"
 
 html_theme = "furo"
+html_theme_options = {
+    # sidebar icons: GitHub repo link + "edit on GitHub" per page
+    "source_repository": "https://github.com/boileaum/mini-amc/",
+    "source_branch": "main",
+    "source_directory": "docs/source/",
+}
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
