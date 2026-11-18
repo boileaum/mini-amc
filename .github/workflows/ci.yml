@@ -57,3 +57,22 @@ jobs:
           name: coverage-xml
           path: coverage.xml
           if-no-files-found: ignore
+  pages-source:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: read
+    steps:
+      - name: Check the Pages source is GitHub Actions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          if ! build_type=$(gh api "repos/$REPO/pages" --jq .build_type); then
+            echo "::error::Cannot read the Pages settings. Enable Pages with Source = GitHub Actions."
+            exit 1
+          fi
+          if [ "$build_type" != "workflow" ]; then
+            echo "::error::Pages source is '$build_type', not 'workflow': the site serves the branch and Jekyll renders README.md instead of the Sphinx doc. Set Settings > Pages > Source = GitHub Actions, then re-run the pages workflow."
+            exit 1
+          fi
