@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- CI fix: the `coverage-badge` hook is no longer replayed in CI. Coverage drifts by a few hundredths between machines (93.24% committed vs 93.26% locally), so `genbadge` rewrote `assets/coverage.svg`, pre-commit reported "files were modified" and the job failed. The badge stays a local artifact refreshed by the pre-push hook and committed by hand; CI only enforces `--cov-fail-under`. The `tests` and `coverage` jobs are merged into one (the `coverage` hook already runs the whole suite) and `coverage.xml` is uploaded as a build artifact.
 - Style: no em dashes anywhere in the repo (account instruction "pas de tiret quadratin") - prose uses " - ", runbook step titles use "Step N: Title".
 - Runbook reworked (more concise, more visual): summary table at the top (steps 1-8 → action / command / output), section titles "Step N - …", bullets tightened with quickstart cross-references, dev-only pre-commit bullet removed from the exam-day checklist. Quickstart section titles shortened to "(step N)".
 - `mini-amc init` now also writes a `.gitignore` (from the packaged `src/mini_amc/examples/gitignore.example`: `data/`, `scans/`, `preview/`, `__pycache__/`, `*.pyc`, `.venv/`) so an exam folder tracked with git never commits local student data. Tests updated; docs: quickstart §2.
