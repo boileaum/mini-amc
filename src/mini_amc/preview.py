@@ -24,7 +24,7 @@ def write_copy_json(build_dir: Path, bank_path: Path, seed: int) -> Path:
 
     Args:
         build_dir: Build directory produced by :func:`compile_copy`.
-        bank_path: Question bank (YAML or Typst subject).
+        bank_path: Subject written with the ``amc.typ`` prelude.
         seed: Shuffle seed.
 
     Returns:
@@ -43,7 +43,7 @@ def build_preview(bank_path: Path, out_dir: Path, seed: int, template: Path) -> 
     Generate and compile one preview copy.
 
     Args:
-        bank_path: Question bank (YAML or Typst subject).
+        bank_path: Subject written with the ``amc.typ`` prelude.
         out_dir: Preview output directory (``./preview`` by default).
         seed: Shuffle seed (fixed by default for a stable preview).
         template: Template directory.
@@ -121,8 +121,8 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument(
         "--bank",
         type=Path,
-        default=Path("bank.example.yml"),
-        help="question bank: YAML (.yml) or Typst subject (.typ)",
+        default=Path("subject.typ"),
+        help="subject written with the amc.typ prelude",
     )
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", type=Path, default=Path("preview"))

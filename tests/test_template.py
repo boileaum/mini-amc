@@ -4,6 +4,9 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from subject import write_subject
+
+from mini_amc.gen.generate import write_bank_module
 
 pytestmark = pytest.mark.skipif(
     shutil.which("typst") is None, reason="typst binary required"
@@ -16,9 +19,6 @@ N_QUESTIONS = 40
 
 def _build_copy(dir_path: Path) -> None:
     shutil.copy(TEMPLATE / "main.typ", dir_path / "main.typ")
-    # YAML bank through the adapter: the template only sees `bank`, whatever
-    # the authoring format
-    shutil.copy(TEMPLATE / "bank-json.typ", dir_path / "bank.typ")
     questions: list[dict] = [
         {
             "id": f"q{i}",
@@ -39,15 +39,12 @@ def _build_copy(dir_path: Path) -> None:
             "max_points": 3,
         }
     )
-    (dir_path / "bank.json").write_text(
-        json.dumps(
-            {
-                "meta": {"title": "Test", "course": "T", "date": "2026-11-13"},
-                "questions": questions,
-            }
-        ),
-        encoding="utf-8",
+    subject = write_subject(
+        dir_path,
+        questions,
+        {"title": "Test", "course": "T", "date": "2026-11-13"},
     )
+    write_bank_module(subject, dir_path)
     plan = {
         "copy_id": "9999",
         "questions": [

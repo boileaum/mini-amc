@@ -1,9 +1,9 @@
 // Example subject written in Typst with the mini-amc prelude.
 //
-// Generate the copies from this file instead of a YAML bank:
-//   mini-amc generate --bank subject.example.typ --copies 30 --seed 42
+// Generate the copies from this file:
+//   mini-amc generate --bank subject.typ --copies 30 --seed 42
 // Check the layout while you write (live re-render on save):
-//   typst watch subject.example.typ subject.pdf
+//   typst watch subject.typ subject.pdf
 //
 // `amc.typ` ships next to this file (copied by `mini-amc init`). Questions are
 // values: `#question(...)` returns one and `#exam(...)` takes the array. Split
@@ -50,5 +50,5 @@
   ) + chapter,
 )
 
-// Draft PDF of the subject: `typst compile subject.example.typ`
+// Draft PDF of the subject: `typst compile subject.typ`
 #render(bank)

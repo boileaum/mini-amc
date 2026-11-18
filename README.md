@@ -12,7 +12,7 @@ A mini-clone of [Auto-Multiple-Choice](https://www.auto-multiple-choice.net) (AM
 ## Features
 
 - **Everything is local**: exam papers, student scans and grades never leave your machine
-- **Write the exam once**, in a YAML question bank or directly in Typst with the `amc.typ` prelude (math, code blocks, split over several files, external files pulled in with `read()`): MCQ (single-answer or multi-answer) + open questions you grade on the paper copy (blacken one lettered box in the gray grader area)
+- **Write the exam once**, in Typst with the `amc.typ` prelude (math, code blocks, split over several files, external files pulled in with `read()`): MCQ (single-answer or multi-answer) + open questions you grade on the paper copy (blacken one lettered box in the gray grader area)
 - **Print one personalized PDF copy per student** (questions and choices shuffled differently on each copy)
 - **Scan the returned copies**: answers are **read automatically (OMR)**, doubtful or ambiguous cases are flagged for review
 - **Review doubtful copies** in a local web UI and correct them there, with the annotated scan next to the detected answers
@@ -35,7 +35,7 @@ flowchart TD
   classDef tool fill:#d4edda,stroke:#2e7d32,stroke-width:2px
   classDef data fill:#d1ecf1,stroke:#0c5460
 
-  bank["bank.yml + students.csv"]:::data
+  bank["subject.typ + students.csv"]:::data
   bank --> gen("<b>1</b> · mini-amc generate"):::tool
   gen --> pdf["data/copy_XXXX.pdf"]:::data
   pdf --> print("<b>2</b> · Print"):::tool
@@ -52,4 +52,4 @@ flowchart TD
   grades --> notes["data/notes.csv + notes_detail.csv"]:::data
 ```
 
-Full guide: [quickstart](https://boileaum.github.io/mini-amc/quickstart.html) · exam-day checklist: [runbook](https://boileaum.github.io/mini-amc/runbook.html) · API reference: [api](https://boileaum.github.io/mini-amc/api.html) · scope and technical decisions: `SCOPE.md` in the repo.
+Full guide: [quickstart](https://boileaum.github.io/mini-amc/quickstart.html) · [writing the subject](https://boileaum.github.io/mini-amc/subject.html) · [students and grading](https://boileaum.github.io/mini-amc/students.html) · [review UI](https://boileaum.github.io/mini-amc/review.html) · exam-day checklist: [runbook](https://boileaum.github.io/mini-amc/runbook.html) · API reference: [api](https://boileaum.github.io/mini-amc/api.html) · scope and technical decisions: `SCOPE.md` in the repo.

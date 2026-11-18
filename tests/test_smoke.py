@@ -8,8 +8,8 @@ import pytest
 def test_load_bank_example():
     from mini_amc.gen.generate import load_bank
 
-    bank = load_bank(Path("src/mini_amc/examples/bank.example.yml"))
-    assert len(bank["questions"]) == 5
+    bank = load_bank(Path("src/mini_amc/examples/subject.typ"))
+    assert len(bank["questions"]) == 6
     assert sum(1 for q in bank["questions"] if q.get("type") == "open") == 1
 
 
@@ -28,7 +28,7 @@ def test_compile_fixture(tmp_path):
     import qrcode
 
     template = Path("src/mini_amc/template")
-    subject = Path("src/mini_amc/examples/subject.example.typ").resolve()
+    subject = Path("src/mini_amc/examples/subject.typ").resolve()
     shutil.copy(template / "main.typ", tmp_path / "main.typ")
     shutil.copy(template / "copy.example.json", tmp_path / "copy.json")
     # the template imports `bank`: point it at the example subject (the build

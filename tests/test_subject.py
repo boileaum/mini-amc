@@ -11,7 +11,7 @@ needs_typst = pytest.mark.skipif(
 )
 
 
-def write_subject(tmp_path: Path, body: str) -> Path:
+def write_raw_subject(tmp_path: Path, body: str) -> Path:
     shutil.copy(EXAMPLES / "amc.typ", tmp_path / "amc.typ")
     path = tmp_path / "subject.typ"
     path.write_text(body, encoding="utf-8")
@@ -19,8 +19,8 @@ def write_subject(tmp_path: Path, body: str) -> Path:
 
 
 @needs_typst
-def test_load_bank_from_typ(tmp_path):
-    path = write_subject(
+def test_load_bank(tmp_path):
+    path = write_raw_subject(
         tmp_path,
         """
 #import "amc.typ": exam, question, choice, render
@@ -56,8 +56,8 @@ def test_load_bank_from_typ(tmp_path):
 
 
 @needs_typst
-def test_load_bank_from_typ_flattens_markup(tmp_path):
-    path = write_subject(
+def test_load_bank_flattens_markup(tmp_path):
+    path = write_raw_subject(
         tmp_path,
         """
 #import "amc.typ": exam, question, choice
@@ -76,8 +76,8 @@ def test_load_bank_from_typ_flattens_markup(tmp_path):
 
 
 @needs_typst
-def test_load_bank_from_typ_asserts_bad_question(tmp_path):
-    path = write_subject(
+def test_load_bank_asserts_bad_question(tmp_path):
+    path = write_raw_subject(
         tmp_path,
         """
 #import "amc.typ": exam, question, choice
@@ -92,8 +92,8 @@ def test_load_bank_from_typ_asserts_bad_question(tmp_path):
 
 
 @needs_typst
-def test_load_bank_from_typ_without_questions(tmp_path):
-    path = write_subject(
+def test_load_bank_without_questions(tmp_path):
+    path = write_raw_subject(
         tmp_path, '#import "amc.typ": exam\n#let bank = exam(title: "x")\n'
     )
     with pytest.raises(ValueError, match="no #question found"):
@@ -101,8 +101,8 @@ def test_load_bank_from_typ_without_questions(tmp_path):
 
 
 @needs_typst
-def test_load_bank_from_typ_reports_typst_error(tmp_path):
-    path = write_subject(
+def test_load_bank_reports_typst_error(tmp_path):
+    path = write_raw_subject(
         tmp_path,
         """
 #import "amc.typ": exam, question, choice
@@ -117,14 +117,14 @@ def test_load_bank_from_typ_reports_typst_error(tmp_path):
 
 
 @needs_typst
-def test_load_bank_from_typ_without_bank(tmp_path):
-    path = write_subject(tmp_path, '#import "amc.typ": exam\n#show: exam.with()\n')
+def test_load_bank_without_bank(tmp_path):
+    path = write_raw_subject(tmp_path, '#import "amc.typ": exam\n#show: exam.with()\n')
     with pytest.raises(RuntimeError, match="typst eval failed"):
         load_bank(path)
 
 
 @needs_typst
-def test_load_bank_from_typ_splits_files(tmp_path):
+def test_load_bank_splits_files(tmp_path):
     (tmp_path / "q").mkdir()
     (tmp_path / "code").mkdir()
     (tmp_path / "code" / "snippet.py").write_text("print(1)\n", encoding="utf-8")
@@ -140,7 +140,7 @@ def test_load_bank_from_typ_splits_files(tmp_path):
 """,
         encoding="utf-8",
     )
-    path = write_subject(
+    path = write_raw_subject(
         tmp_path,
         """
 #import "amc.typ": exam, question, choice
@@ -160,30 +160,19 @@ def test_load_bank_from_typ_splits_files(tmp_path):
 
 
 @needs_typst
-def test_example_subject_matches_example_bank():
-    from_subject = load_bank(EXAMPLES / "subject.example.typ")
-    from_yaml = load_bank(EXAMPLES / "bank.example.yml")
-    assert from_subject["meta"] == from_yaml["meta"]
-
-    def normalize(bank):
-        out = []
-        for q in bank["questions"]:
-            # texts are not compared: a subject text is flattened content
-            # ("$7 × 8$"), a YAML text is the raw markup ("$7 times 8$")
-            assert q["text"]
-            item = {"id": q["id"], "type": q.get("type", "mcq")}
-            if item["type"] == "open":
-                item["max_points"] = q["max_points"]
-            else:
-                item["correct"] = tuple(
-                    bool(c.get("correct", False)) for c in q["choices"]
-                )
-            out.append(item)
-        return out
-
-    # the subject example adds a chapter (external code file): the questions
-    # the two examples have in common must agree
-    by_id = {q["id"]: q for q in normalize(from_subject)}
-    for question in normalize(from_yaml):
-        assert by_id[question["id"]] == question
-    assert len(from_subject["questions"]) == len(from_yaml["questions"]) + 1
+def test_example_subject_loads():
+    bank = load_bank(EXAMPLES / "subject.typ")
+    assert bank["meta"] == {
+        "title": "Demo exam",
+        "course": "Demo 101",
+        "date": "2026-11-12",
+    }
+    by_id = {q["id"]: q for q in bank["questions"]}
+    assert list(by_id) == ["q1", "q2", "q3", "q4", "q5", "q6"]
+    assert by_id["q3"]["text"] == "What is $7 × 8$?"
+    assert by_id["q5"]["type"] == "open"
+    assert by_id["q5"]["max_points"] == 2
+    assert "choices" not in by_id["q5"]
+    # q6 comes from the chapter file and shows an external code file
+    assert "print" in by_id["q6"]["text"]
+    assert by_id["q1"]["choices"][0] == {"text": "Paris", "correct": True}

@@ -1,8 +1,8 @@
 // One exam copy. The build directory is self-contained (main.typ, bank.typ,
 // copy.json, qr-N.png): `typst compile main.typ out.pdf` works there as is.
 //
-// `bank` is the exam as the author wrote it (a Typst subject, or a YAML bank
-// through bank-json.typ); `copy.json` is the plan: which source question and
+// `bank` is the exam as the author wrote it (the subject, imported through the
+// generated bank.typ); `copy.json` is the plan: which source question and
 // which source choice go where on this copy. The statements therefore reach
 // the PDF as the author's content, never as a re-parsed string.
 #import "bank.typ": bank

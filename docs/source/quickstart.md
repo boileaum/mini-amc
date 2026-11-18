@@ -1,6 +1,10 @@
 # Quickstart
 
-End-to-end usage of mini-amc: from a YAML question bank to CSV grades. All data stays local (student scans never leave the machine; `data/` and `scans/` are gitignored). The two setup sections come first; the rest follows the pipeline steps 1-8 of the README diagram (1 generate … 8 grades), with the same numbers as the runbook.
+From a subject written in Typst to CSV grades, on one machine: the exam papers,
+the student scans and the grades never leave it (`data/` and `scans/` are
+gitignored). The two setup sections come first; the rest follows the pipeline
+steps 1-8 of the README diagram, with the same numbers as the runbook. Each step
+links to the page that details it.
 
 ## Setup: install
 
@@ -15,39 +19,24 @@ sudo mv /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
 typst --version         # -> typst 0.15.1
 ```
 
-## Setup: question bank and students
+## Setup: create the exam folder
 
-Start from the example files - `mini-amc init` copies them into the exam folder (`bank.example.yml`, the Typst subject `amc.typ` + `subject.example.typ` + `q/chapter.example.typ` + `code/fizzbuzz.example.py`, `students.example.csv`, `students.moodle.example.csv`, `runbook.md`) and writes a `.gitignore` (`data/`, `scans/`, `preview/`, `.venv/`, …) so that if you track the exam folder with git, the local data (student scans, grades) is never committed:
+`mini-amc init` copies a working example into the folder: the subject prelude
+`amc.typ`, a ready-to-edit subject (`subject.typ`) with a second chapter and an
+external code file (`q/chapter.example.typ`, `code/fizzbuzz.example.py`), two
+students CSVs and the runbook. It also writes a `.gitignore` (`data/`,
+`scans/`, `preview/`, `.venv/`, …), so an exam folder tracked with git never
+commits local student data.
 
 ```bash
 mkdir my-exam && cd my-exam && mini-amc init .
 ```
 
-`bank.example.yml` ([view on GitHub](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/bank.example.yml)): `meta` (title, course, date) + `questions`. Two kinds:
+## Step 1: Write the subject
 
-```yaml
-questions:
-  - id: q1                      # MCQ: choices + exactly one correct
-    text: "What is the capital of France?"
-    choices:
-      - text: "Paris"
-        correct: true
-      - text: "Lyon"
-
-  - id: q5                      # open question, graded by the teacher (0..max_points)
-    type: open
-    text: "Briefly explain the French Revolution."
-    max_points: 2
-```
-
-Question and choice texts are parsed as Typst markup, so you can use math (`$E = m c^2$`) and fenced code blocks (```` ```python ... ``` ````) directly in the YAML - mind Typst math syntax (single letters are variables, `m c^2` not `mc^2`).
-
-### Or write the subject in Typst
-
-`mini-amc init` also copies `amc.typ`, a small prelude that turns the subject
-itself into the bank: same questions, same `--bank` flag, only the file suffix
-changes. `#exam`, `#question` and `#choice` return plain values, and
-`#render(bank)` lays the subject out for the draft.
+The subject is a Typst file, `subject.typ` (already there after `init`: replace
+its questions). `amc.typ` (the prelude) turns `#choice`, `#question` and
+`#exam` into plain values, and `#render(bank)` lays the draft out:
 
 ```typst
 #import "amc.typ": choice, exam, question, render
@@ -78,127 +67,56 @@ changes. `#exam`, `#question` and `#choice` return plain values, and
 #render(bank)   // draft PDF of the subject, without OMR markers nor QR code
 ```
 
-```bash
-typst watch subject.example.typ subject.pdf     # live re-render on save
-mini-amc generate --bank subject.example.typ --copies 30 --seed 42
-```
-
 `mini-amc` runs `typst eval` on the file and reads that same value back, so the
 subject you write and the copies the students get cannot drift apart. A mistake
 in a question points at your own file (line and caret) instead of the template.
 
 A statement is Typst content: a plain string is printed verbatim, so use a
-content block as soon as it needs markup.
+content block `[...]` as soon as it needs markup (`$math$`, `` `code` ``).
 
-```typst
-question(
-  id: "q3",
-  text: [What is $7 times 8$?],
-  choices: (choice([$54$]), choice([$56$], correct: true), choice([$63$])),
-)
-```
+Multi-answer questions, splitting the subject over several files and pulling in
+external files: [Writing the subject](subject.md).
 
-Split the subject over several files and join the arrays with `+` (one file per
-part of the course, for instance):
-
-```typst
-#import "amc.typ": choice, exam, question, render
-#import "q/chapter1.typ": questions as chapter1
-#import "q/chapter2.typ": questions as chapter2
-
-#let bank = exam(
-  title: "Demo exam",
-  questions: (
-    question(
-      id: "q1",
-      text: "What is the capital of France?",
-      choices: (choice("Paris", correct: true), choice("Lyon")),
-    ),
-  ) + chapter1 + chapter2,
-)
-
-#render(bank)
-```
-
-`read()` pulls in an external file, so a code snippet shown on the copy is the
-real, runnable file - no copy-paste to keep in sync:
-
-```typst
-question(
-  id: "q6",
-  text: [
-    What does this program print?
-
-    #raw(read("code/fizzbuzz.py", encoding: "utf8"), lang: "python")
-  ],
-  choices: (choice("1 2 3"), choice("1 2 Fizz", correct: true), choice("Fizz 2 3")),
-)
-```
-
-The complete example ships as
-[`subject.example.typ`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/subject.example.typ)
-with its second chapter
-[`q/chapter.example.typ`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/q/chapter.example.typ)
-and the external code file
-[`code/fizzbuzz.example.py`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/code/fizzbuzz.example.py),
-next to
-[`amc.typ`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/amc.typ).
-
-Optionally, a nominative CSV links copy ids to students. Example files (copied by `mini-amc init`): [`students.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.example.csv) and [`students.moodle.example.csv`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/students.moodle.example.csv):
-
-```{literalinclude} ../../src/mini_amc/examples/students.example.csv
-:language: text
-:caption: students.example.csv (simple format: copy_id,name)
-```
-
-```{literalinclude} ../../src/mini_amc/examples/students.moodle.example.csv
-:language: text
-:caption: students.moodle.example.csv (Moodle-style export, ; separated)
-```
+## Step 2: Check the layout
 
 ```bash
-# simple format: copy_id,name
-mini-amc generate --bank bank.yml --copies 30 --seed 42 --students students.csv
-# Moodle export: link column = student number, name from first/last name, delimiter auto-detected
-mini-amc generate --bank bank.yml --copies 30 --seed 42 --students moodle.csv \
-  --students-id-column "Numéro étudiant" --students-name-columns "Prénom,Nom"
+typst watch subject.typ subject.pdf   # draft, live re-render on save
+mini-amc preview --png                # the real copy (markers, QR, shuffle)
 ```
 
-## Step 1: Generate the copies
+`mini-amc preview` renders ONE copy into the gitignored `./preview/` and never
+touches `./data`; `--watch` re-renders on change. The build dir
+`preview/build/0001/` is self-contained, so plain `typst compile main.typ
+out.pdf` works there as a fallback.
 
-While writing the bank, check the layout on a single copy (never touches `./data`, output goes to the gitignored `./preview/`):
-
-```bash
-mini-amc preview --bank bank.example.yml            # preview/copy_0001.pdf
-mini-amc preview --png                               # + preview/page-N.png
-mini-amc preview --watch                             # re-render on change (typst watch);
-                                                     # regenerates copy.json if the bank changes
-# fallback: the build dir is self-contained - plain typst works there too
-cd preview/build/0001 && typst compile main.typ out.pdf   # or: typst watch main.typ out.pdf
-```
+## Step 3: Generate the copies
 
 ```bash
-mini-amc generate --bank bank.example.yml --copies 30 --seed 42
+mini-amc generate --bank subject.typ --copies 30 --seed 42
 ```
 
 Produces in `data/`:
 
 - `copy_XXXX.pdf`: printable copies, seeded shuffle of questions and choices,
 - `copy_XXXX.json`, `positions.json`: bubble/grade-box positions,
-- `answers.json`: answer key
+- `answers.json`: answer key,
+- `config.json`: grading scheme of the exam,
 - `students.json` if `--students` was given.
 
 Generation is staged: on failure, `data/` is left untouched.
 
-Preview of the example copy (`bank.example.yml`, `students.example.csv`, copy `0001` « Alice Martin », seed 42 - corner squares, per-page QR code top right, student name in the header, MCQ bubbles with a math formula in q3, gray grader area with lettered grade boxes A/B/C for the open question):
+Preview of the example copy (`subject.typ`, `students.example.csv`, copy
+`0001` « Alice Martin », seed 42 - corner squares, per-page QR code top right,
+student name in the header, MCQ bubbles with a math formula in q3, gray grader
+area with lettered grade boxes A/B/C for the open question):
 
 ```{figure} _static/copy.example.png
-:alt: Example exam copy page generated from bank.example.yml with a fictitious student name
+:alt: Example exam copy page generated from subject.typ with a fictitious student name
 
-Copy 0001 of the example bank (page 1)
+Copy 0001 of the example subject (page 1)
 ```
 
-## Steps 2-4: Print, exam, manual grading
+## Step 4: Print, exam, manual grading
 
 - Print with **no "fit to page" scaling** (it distorts the geometry).
 - Check on a test copy: the 4 black corner squares and the QR code (top right) are well printed.
@@ -210,7 +128,7 @@ but a doubtful reading is only flagged `needs_review` for manual review,
 never silently misread.
 ```
 - Students check ONE box per single-answer MCQ (circle bubbles), several for multi-answer ones (square bubbles); open questions are left blank during the exam.
-- After the exam, **before scanning**: the teacher blackens ONE lettered grade box per open question in the gray grader area (A = 0 pt, B = 1 pt, … up to `max_points`).
+- After the exam, **before scanning**: the teacher blackens ONE lettered grade box per open question in the gray grader area (A = 0 pt, B = 1 pt, … up to `max-points`).
 
 ## Step 5: Scan the copies
 
@@ -228,22 +146,20 @@ Put the scans in `scans/`, one file per page:
 mini-amc omr    # reads scans/, writes data/omr_results.json + data/annotated/
 ```
 
-Each scan gets a status: `ok` / `needs_review` (ambiguous bubbles, ungraded open question) / `unread` (unreadable). Results are aggregated per copy in `omr_results.json` (`copies` section, multi-page: `ok` / `needs_review` / `partial` / `unread`), with straightened + annotated scans in `data/annotated/`.
+Each scan gets a status: `ok` / `needs_review` (ambiguous bubbles, ungraded open
+question) / `unread` (unreadable). Results are aggregated per copy in
+`omr_results.json` (`copies` section, multi-page: `ok` / `needs_review` /
+`partial` / `unread`), with straightened + annotated scans in `data/annotated/`.
 
-## Step 7: Review (web UI)
+## Step 7: Review
 
 ```bash
-mini-amc web --reload    # -> http://127.0.0.1:8000/copies (reads ./data; override with --data DIR)
+mini-amc web    # -> http://127.0.0.1:8000/copies (reads ./data)
 ```
 
-All commands work on the conventional `data/` directory of the current project - one common name for all exams, no per-file paths to manage (`generate`/`grades` accept `--data`/`--out`, `omr` defaults to `data/…`, `web` reads `./data` or `$MINI_AMC_DATA`).
-
-JSON API (interactive docs at `/docs`):
-
-- `GET /copies` - all copies with status, pages/questions read, corrections count, student name
-- `GET /copy/{copy_id}` - per question: detected choices (`checked`, `fills`, `needs_review`), expected answer, ongoing correction, current score
-- `GET /copy/{copy_id}/scan/{page}` - annotated scan image of the page
-- `POST /copy/{copy_id}/correction` - `{"qid": "q1", "checked": ["B"]}` for an MCQ, `{"qid": "q5", "checked": [2]}` to override a misread grade box of an open question (empty list clears); saved to `data/corrections.json`, score recomputed. Open questions are normally graded on paper before scanning; an ungraded one shows `needs_review`.
+Only the doubtful copies need a look: the annotated scan sits next to the
+detected answers, and a correction overrides the reading. What the UI shows and
+its JSON API: [Review UI](review.md).
 
 ## Step 8: Grades
 
@@ -251,6 +167,14 @@ JSON API (interactive docs at `/docs`):
 mini-amc grades
 ```
 
-The grading scheme is chosen per exam in `data/config.json` (`{"bareme": "v1"}` written by `generate`; edit it or pass `--bareme amc` to `grades`/`web`). Known schemes: `v1` (exact set = 1 pt), `amc` (+1 per correct checked, −1 per wrong, floored at 0). Writes `data/notes.csv` (`copy_id,student,status,bareme,score,score_max`) and `data/notes_detail.csv` (`copy_id,qid,type,page,checked,correction,expected,point,needs_review`). Grading scheme v1: 1 pt per correct MCQ answer, open question = the blackened grade box value (0..max_points), no negative points; manual corrections override the OMR reading.
+Writes `data/notes.csv` (one row per copy: `copy_id,student,status,bareme,score,score_max`)
+and `data/notes_detail.csv` (one row per question). Grading schemes, student
+names and the exact CSV columns: [Students and grading](students.md).
 
-See the [runbook](runbook.md) for the full exam-day checklist and failure procedures, and the [API](api.md) reference.
+## Where to go next
+
+- [Writing the subject](subject.md): the prelude, open questions, multi-answer, several files, external code.
+- [Students and grading](students.md): nominative CSV (simple or Moodle export), grading schemes, CSV columns.
+- [Review UI](review.md): statuses, annotated scans, corrections, JSON API.
+- [Runbook](runbook.md): exam-day checklist and what to do when a step fails.
+- [API](api.md): the Python modules.

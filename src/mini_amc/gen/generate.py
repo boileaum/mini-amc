@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any
 
 import qrcode
-import yaml
 
 from mini_amc.grade.notes import DEFAULT_BAREME
 
@@ -34,32 +33,6 @@ COPY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PAGE_W_CM = 21.0
 PAGE_H_CM = 29.7
 CM_TO_PT = 72 / 2.54
-
-
-def load_bank(path: Path) -> dict:
-    """
-    Load and validate a question bank.
-
-    The format follows the file suffix: YAML (``bank.example.yml``) or a
-    Typst subject written with the ``amc.typ`` prelude (``subject.typ``).
-    An invalid bank raises ``ValueError`` (empty bank, duplicate/missing ids,
-    an MCQ question without a ``correct`` choice or with a choice count
-    outside [2, 26], an open question with invalid ``max_points`` or with
-    ``choices``); a ``.typ`` subject that fails to evaluate raises
-    ``RuntimeError``.
-
-    Args:
-        path: Bank file path (``.yml``/``.yaml`` or ``.typ``).
-
-    Returns:
-        The parsed bank (dict with ``meta`` and ``questions``).
-    """
-    if path.suffix.lower() == ".typ":
-        data = load_bank_from_typ(path)
-    else:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    validate_bank(data)
-    return data
 
 
 def flatten_content(value: Any) -> str:
@@ -113,27 +86,28 @@ def _flatten(value: Any) -> str:
     return _flatten(value.get("children", []))
 
 
-def load_bank_from_typ(path: Path) -> dict:
+def load_bank(path: Path) -> dict:
     """
-    Read a Typst subject (``amc.typ`` prelude) back into a question bank.
+    Read a Typst subject (``amc.typ`` prelude) back into a validated bank.
 
     Runs ``typst eval`` on an expression that imports the subject and returns
     its ``bank`` value, so the bank is read from the same value the template
     renders: no second parsing of the document, no ``eval`` of the statements.
     The statements are then flattened to plain text (see
-    :func:`flatten_content`).
+    :func:`flatten_content`) for the review UI and the checks.
 
     Args:
-        path: Subject file (e.g. ``subject.example.typ``).
+        path: Subject file (e.g. ``subject.typ``).
 
     Returns:
-        The bank (dict with ``meta`` and ``questions``), not yet validated.
+        The bank (dict with ``meta`` and ``questions``).
 
     Raises:
         RuntimeError: ``typst`` missing from PATH, or the subject fails to
             evaluate (a bad ``#question`` call, a missing ``amc.typ``, no
             ``bank`` value, …).
-        ValueError: The subject defines no question.
+        ValueError: The subject defines no question, or the bank breaks a
+            rule checked by :func:`validate_bank`.
     """
     typst = _require_typst()
     subject = path.resolve()
@@ -176,7 +150,9 @@ def load_bank_from_typ(path: Path) -> dict:
         questions.append(question)
     if not questions:
         raise ValueError(f"{subject.name}: no #question found")
-    return {"meta": meta, "questions": questions}
+    data = {"meta": meta, "questions": questions}
+    validate_bank(data)
+    return data
 
 
 def validate_bank(data: dict) -> None:
@@ -184,7 +160,7 @@ def validate_bank(data: dict) -> None:
     Check a bank against the rules the template and the OMR rely on.
 
     Args:
-        data: Bank dict (``meta`` + ``questions``), from YAML or a subject.
+        data: Bank dict (``meta`` + ``questions``) read from a subject.
 
     Raises:
         ValueError: Empty bank, duplicate/missing ids, an MCQ question
@@ -424,35 +400,22 @@ def compile_root(bank_path: Path, build_dir: Path) -> str:
     return str(Path(os.path.commonpath([str(p) for p in paths])))
 
 
-def write_bank_module(template_dir: Path, bank_path: Path, build: Path) -> None:
+def write_bank_module(bank_path: Path, build: Path) -> None:
     """
     Write the ``bank.typ`` module the template imports.
 
-    A Typst subject is imported as is (one line, so the statements stay the
-    author's content). A YAML bank goes through ``bank-json.typ``, which reads
-    ``bank.json`` and re-parses the statements as markup.
+    One ``#import`` line: the template renders the subject's own value, so the
+    statements reach the PDF as the author's content.
 
     Args:
-        template_dir: Template directory (its ``bank-json.typ`` wins over the
-            packaged one, so a local template can adapt the YAML path).
-        bank_path: Question bank path.
+        bank_path: Subject path.
         build: Build directory.
     """
-    if bank_path.suffix.lower() == ".typ":
-        # relative import: the build dir sits under the output dir, not next to
-        # the subject; --root (see compile_root) makes the .. path legal
-        relative = Path(os.path.relpath(bank_path.resolve(), build.resolve()))
-        (build / "bank.typ").write_text(
-            f"#import {json.dumps(relative.as_posix())}: bank\n", encoding="utf-8"
-        )
-        return
-    (build / "bank.json").write_text(
-        json.dumps(load_bank(bank_path), ensure_ascii=False), encoding="utf-8"
-    )
-    adapter = template_dir / "bank-json.typ"
-    shutil.copy(
-        adapter if adapter.exists() else PACKAGED_TEMPLATE / "bank-json.typ",
-        build / "bank.typ",
+    # relative import: the build dir sits under the output dir, not next to the
+    # subject; --root (see compile_root) makes the .. path legal
+    relative = Path(os.path.relpath(bank_path.resolve(), build.resolve()))
+    (build / "bank.typ").write_text(
+        f"#import {json.dumps(relative.as_posix())}: bank\n", encoding="utf-8"
     )
 
 
@@ -468,8 +431,7 @@ def compile_copy(
 
     Args:
         template_dir: Directory containing ``main.typ``.
-        bank_path: Question bank (``.typ`` subject or YAML file) the copy is
-            rendered from.
+        bank_path: Subject the copy is rendered from.
         copy: Copy plan (dict without ``answers``) written as ``copy.json``.
         out_pdf: Output PDF path.
 
@@ -485,7 +447,7 @@ def compile_copy(
     build = out_pdf.parent / "build" / copy_id
     build.mkdir(parents=True, exist_ok=True)
     shutil.copy(template_dir / "main.typ", build / "main.typ")
-    write_bank_module(template_dir, bank_path, build)
+    write_bank_module(bank_path, build)
     (build / "copy.json").write_text(
         json.dumps(copy, ensure_ascii=False), encoding="utf-8"
     )
@@ -609,8 +571,8 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument(
         "--bank",
         type=Path,
-        default=Path("bank.example.yml"),
-        help="question bank: YAML (.yml) or Typst subject (.typ)",
+        default=Path("subject.typ"),
+        help="subject written with the amc.typ prelude",
     )
     ap.add_argument("--copies", type=int, default=10)
     ap.add_argument("--seed", type=int, default=42)

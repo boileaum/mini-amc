@@ -7,9 +7,8 @@ from pathlib import Path
 EXAMPLES_DIR = Path(__file__).resolve().parent / "examples"
 
 EXAMPLE_FILES = [
-    "bank.example.yml",
     "amc.typ",
-    "subject.example.typ",
+    "subject.typ",
     "q/chapter.example.typ",
     "code/fizzbuzz.example.py",
     "students.example.csv",
@@ -27,10 +26,9 @@ def init_project(directory: Path, force: bool = False) -> list[Path]:
     """
     Copy the example files into a project dir.
 
-    That is the YAML bank, the Typst subject prelude (``amc.typ``) with its
-    example subject, one example chapter (``q/chapter.example.typ``) reading an
-    external code file (``code/fizzbuzz.example.py``), the students CSVs and
-    the runbook.
+    That is the Typst subject prelude (``amc.typ``) with its example subject,
+    one example chapter (``q/chapter.example.typ``) reading an external code
+    file (``code/fizzbuzz.example.py``), the students CSVs and the runbook.
 
     Also writes a ``.gitignore`` (from ``gitignore.example``) so local data
     (``data/``, ``scans/``, ``preview/``) is never committed when the exam
@@ -65,10 +63,10 @@ def main(argv: list[str] | None = None) -> None:
     Subcommand ``mini-amc init`` (via ``mini_amc.cli``).
 
     Creates an exam project directory with the example files:
-    ``bank.example.yml``, ``amc.typ``, ``subject.example.typ``,
-    ``q/chapter.example.typ``, ``code/fizzbuzz.example.py``,
-    ``students.example.csv``, ``students.moodle.example.csv``,
-    ``runbook.md`` and a ``.gitignore`` (local data never committed).
+    ``amc.typ``, ``subject.typ``, ``q/chapter.example.typ``,
+    ``code/fizzbuzz.example.py``, ``students.example.csv``,
+    ``students.moodle.example.csv``, ``runbook.md`` and a ``.gitignore``
+    (local data never committed).
 
     Args:
         argv: Command line arguments (defaults to ``sys.argv[1:]``).

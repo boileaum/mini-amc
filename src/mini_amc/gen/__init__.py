@@ -1,1 +1,1 @@
-"""Exam copy generation (YAML question bank -> Typst PDF)."""
+"""Exam copy generation (Typst subject -> Typst PDF)."""

@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import pytest
 import qrcode
-import yaml
+from subject import write_subject
 from synth import (
     CORNER_PX,
     MARKER_PX,
@@ -40,7 +40,7 @@ TEMPLATE = Path("src/mini_amc/template")
 SCORE_MAX = (N_QUESTIONS - N_OPEN) * 1 + 2 + 3
 
 
-def _write_bank(path: Path) -> None:
+def _write_bank(root: Path) -> Path:
     questions: list[dict] = [
         {
             "id": f"q{i}",
@@ -62,14 +62,10 @@ def _write_bank(path: Path) -> None:
     questions.append(
         {"id": "q40", "text": "Open question 40?", "type": "open", "max_points": 3}
     )
-    path.write_text(
-        yaml.dump(
-            {
-                "meta": {"title": "E2E", "course": "E2E 101", "date": "2026-11-13"},
-                "questions": questions,
-            }
-        ),
-        encoding="utf-8",
+    return write_subject(
+        root,
+        questions,
+        {"title": "E2E", "course": "E2E 101", "date": "2026-11-13"},
     )
 
 
@@ -141,8 +137,7 @@ def _degraded_scan(img, out_jpg: Path, seed: int) -> None:
 @pytest.fixture(scope="module")
 def pipeline(tmp_path_factory):
     root = tmp_path_factory.mktemp("e2e")
-    bank = root / "bank.yml"
-    _write_bank(bank)
+    bank = _write_bank(root)
     data = root / "data"
     scans = root / "scans"
     scans.mkdir()

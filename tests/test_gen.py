@@ -4,7 +4,6 @@ import shutil
 from pathlib import Path
 
 import pytest
-import yaml
 
 from mini_amc.gen.generate import (
     compile_copy,
@@ -12,14 +11,52 @@ from mini_amc.gen.generate import (
     export_positions,
     load_bank,
     plan_copies,
+    validate_bank,
 )
 
-BANK = Path("src/mini_amc/examples/bank.example.yml")
+SUBJECT = Path("src/mini_amc/examples/subject.typ")
 TEMPLATE = Path("src/mini_amc/template")
+needs_typst = pytest.mark.skipif(
+    shutil.which("typst") is None, reason="typst binary required"
+)
+
+# unit tests do not need the typst binary: they work on the bank the subject
+# produces, built here as the dict load_bank returns
+BANK = {
+    "meta": {"title": "Demo exam", "course": "Demo 101", "date": "2026-11-12"},
+    "questions": [
+        {
+            "id": "q1",
+            "text": "What is the capital of France?",
+            "choices": [
+                {"text": "Paris", "correct": True},
+                {"text": "Lyon"},
+                {"text": "Marseille"},
+            ],
+        },
+        {
+            "id": "q2",
+            "text": "Which of these are prime numbers?",
+            "choices": [
+                {"text": "2", "correct": True},
+                {"text": "4"},
+                {"text": "7", "correct": True},
+            ],
+        },
+        {"id": "q5", "text": "Explain.", "type": "open", "max_points": 2},
+    ],
+}
+
+
+def make_bank() -> dict:
+    """Validated copy of :data:`BANK` (what ``load_bank`` returns)."""
+    data = copy_mod.deepcopy(BANK)
+    validate_bank(data)
+    return data
 
 
 def test_plan_copies_reproducible():
-    bank = load_bank(BANK)
+    bank = make_bank()
     a = plan_copies(bank, ["0001", "0002", "0003"], 42)
     b = plan_copies(bank, ["0001", "0002", "0003"], 42)
     assert a == b
@@ -27,7 +64,7 @@ def test_plan_copies_reproducible():
 
 
 def test_plan_copies_validity():
-    bank = load_bank(BANK)
+    bank = make_bank()
     copies = plan_copies(bank, ["0001", "0002", "0003", "0004", "0005"], 7)
     qids = {q["id"] for q in bank["questions"]}
     for c in copies:
@@ -44,30 +81,29 @@ def test_plan_copies_validity():
 
 
 def test_plan_copies_seed_changes_order():
-    bank = load_bank(BANK)
+    bank = make_bank()
     a = plan_copies(bank, ["0001", "0002", "0003"], 42)
     b = plan_copies(bank, ["0001", "0002", "0003"], 43)
     assert a != b
 
 
 def test_plan_copies_does_not_mutate_bank():
-    bank = load_bank(BANK)
+    bank = make_bank()
     snapshot = copy_mod.deepcopy(bank)
     plan_copies(bank, ["0001", "0002", "0003"], 1)
     assert bank == snapshot
 
 
-@pytest.mark.skipif(shutil.which("typst") is None, reason="typst binary required")
+@needs_typst
 def test_compile_and_positions(tmp_path):
-    bank = load_bank(BANK)
-    copies = plan_copies(bank, ["0001", "0002"], 42)
+    copies = plan_copies(load_bank(SUBJECT), ["0001", "0002"], 42)
     for c in copies:
         cid = c["copy_id"]
         copy_json = {k: v for k, v in c.items() if k != "answers"}
         pdf = tmp_path / f"copy_{cid}.pdf"
-        build = compile_copy(TEMPLATE, BANK, copy_json, pdf)
+        build = compile_copy(TEMPLATE, SUBJECT, copy_json, pdf)
         assert pdf.stat().st_size > 0
-        pos = export_positions(build, cid, compile_root(BANK, build))
+        pos = export_positions(build, cid, compile_root(SUBJECT, build))
         n_choices = sum(len(q.get("choices", [])) for q in c["questions"])
         n_gradeboxes = sum(
             q.get("max_points", 0) + 1
@@ -85,7 +121,7 @@ def test_compile_and_positions(tmp_path):
             assert 0 < b["y_pt"] < pos["page"]["h_pt"]
 
 
-@pytest.mark.skipif(shutil.which("typst") is None, reason="typst binary required")
+@needs_typst
 def test_main_end_to_end(tmp_path, monkeypatch):
     from mini_amc.gen.generate import main
 
@@ -94,7 +130,7 @@ def test_main_end_to_end(tmp_path, monkeypatch):
         [
             "mini-amc-gen",
             "--bank",
-            str(BANK),
+            str(SUBJECT),
             "--copies",
             "2",
             "--seed",
@@ -116,7 +152,7 @@ def test_main_end_to_end(tmp_path, monkeypatch):
     config = json.loads((tmp_path / "config.json").read_text(encoding="utf-8"))
     assert config == {"bareme": "v1"}
     for cid, ans in answers.items():
-        assert set(ans) == {"q1", "q2", "q3", "q4", "q5"}
+        assert set(ans) == {"q1", "q2", "q3", "q4", "q5", "q6"}
         assert ans["q5"] == "open"
         assert all(all(x in "ABC" for x in v) for k, v in ans.items() if k != "q5")
         copy_json = json.loads((tmp_path / f"copy_{cid}.json").read_text())
@@ -128,30 +164,18 @@ def test_main_end_to_end(tmp_path, monkeypatch):
             )
 
 
-def test_load_bank_rejects_invalid_questions(tmp_path):
+def test_validate_bank_rejects_invalid_questions():
     base_q = {
         "id": "q1",
         "text": "t?",
         "choices": [{"text": "a", "correct": True}, {"text": "b"}],
     }
-    dup = tmp_path / "dup.json"
-    dup.write_text(json.dumps({"questions": [base_q, dict(base_q)]}), encoding="utf-8")
     with pytest.raises(ValueError, match="duplicate question ids"):
-        load_bank(dup)
-    noid = tmp_path / "noid.json"
-    noid.write_text(
-        json.dumps({"questions": [{k: v for k, v in base_q.items() if k != "id"}]}),
-        encoding="utf-8",
-    )
+        validate_bank({"questions": [base_q, dict(base_q)]})
     with pytest.raises(ValueError, match="needs an id"):
-        load_bank(noid)
-    notext = tmp_path / "notext.json"
-    notext.write_text(
-        json.dumps({"questions": [{k: v for k, v in base_q.items() if k != "text"}]}),
-        encoding="utf-8",
-    )
+        validate_bank({"questions": [{k: v for k, v in base_q.items() if k != "id"}]})
     with pytest.raises(ValueError, match="'text' required"):
-        load_bank(notext)
+        validate_bank({"questions": [{k: v for k, v in base_q.items() if k != "text"}]})
 
 
 def test_main_rejects_zero_copies(tmp_path, monkeypatch):
@@ -159,12 +183,21 @@ def test_main_rejects_zero_copies(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "sys.argv",
-        ["mini-amc-gen", "--bank", str(BANK), "--copies", "0", "--out", str(tmp_path)],
+        [
+            "mini-amc-gen",
+            "--bank",
+            str(SUBJECT),
+            "--copies",
+            "0",
+            "--out",
+            str(tmp_path),
+        ],
     )
     with pytest.raises(SystemExit):
         main()
 
 
+@needs_typst
 def test_main_failure_leaves_out_untouched(tmp_path, monkeypatch):
     import mini_amc.gen.generate as gen
     from mini_amc.gen.generate import main
@@ -184,7 +217,7 @@ def test_main_failure_leaves_out_untouched(tmp_path, monkeypatch):
         [
             "mini-amc-gen",
             "--bank",
-            str(BANK),
+            str(SUBJECT),
             "--copies",
             "3",
             "--seed",
@@ -265,13 +298,14 @@ def test_load_students_errors(tmp_path):
 
 
 def test_plan_copies_rejects_bad_ids():
-    bank = load_bank(BANK)
+    bank = make_bank()
     with pytest.raises(ValueError, match="no copy ids"):
         plan_copies(bank, [], 42)
     with pytest.raises(ValueError, match="duplicate copy ids"):
         plan_copies(bank, ["0001", "0001"], 42)
 
 
+@needs_typst
 def test_main_with_students_moodle(tmp_path, monkeypatch):
     from mini_amc.gen.generate import main
 
@@ -285,7 +319,7 @@ def test_main_with_students_moodle(tmp_path, monkeypatch):
         [
             "mini-amc-gen",
             "--bank",
-            str(BANK),
+            str(SUBJECT),
             "--copies",
             "2",
             "--seed",
@@ -319,6 +353,7 @@ def test_main_with_students_moodle(tmp_path, monkeypatch):
     }
 
 
+@needs_typst
 def test_main_students_count_mismatch(tmp_path, monkeypatch):
     from mini_amc.gen.generate import main
 
@@ -329,7 +364,7 @@ def test_main_students_count_mismatch(tmp_path, monkeypatch):
         [
             "mini-amc-gen",
             "--bank",
-            str(BANK),
+            str(SUBJECT),
             "--copies",
             "3",
             "--students",
@@ -342,25 +377,10 @@ def test_main_students_count_mismatch(tmp_path, monkeypatch):
         main()
 
 
-def test_load_bank_open_question(tmp_path):
-    good = tmp_path / "good.json"
-    good.write_text(
-        json.dumps(
-            {
-                "questions": [
-                    {
-                        "id": "q1",
-                        "text": "t",
-                        "type": "open",
-                        "max_points": 3,
-                    }
-                ]
-            }
-        ),
-        encoding="utf-8",
-    )
-    bank = load_bank(good)
-    assert bank["questions"][0]["type"] == "open"
+def test_validate_bank_open_question():
+    good = {"questions": [{"id": "q1", "text": "t", "type": "open", "max_points": 3}]}
+    validate_bank(good)
+    assert good["questions"][0]["type"] == "open"
     for bad_q, match in [
         ({"id": "q1", "text": "t", "type": "open"}, "max_points"),
         ({"id": "q1", "text": "t", "type": "open", "max_points": 0}, "max_points"),
@@ -380,14 +400,12 @@ def test_load_bank_open_question(tmp_path):
         ),
         ({"id": "q1", "text": "t"}, "'choices' required"),
     ]:
-        p = tmp_path / "bad.json"
-        p.write_text(json.dumps({"questions": [bad_q]}), encoding="utf-8")
         with pytest.raises(ValueError, match=match):
-            load_bank(p)
+            validate_bank({"questions": [bad_q]})
 
 
 def test_plan_copies_open_question():
-    bank = load_bank(BANK)
+    bank = make_bank()
     copies = plan_copies(bank, ["0001"], 42)
     q5 = next(q for q in copies[0]["questions"] if q["id"] == "q5")
     assert q5["type"] == "open" and q5["max_points"] == 2 and "choices" not in q5
@@ -396,7 +414,7 @@ def test_plan_copies_open_question():
     assert q1["type"] == "mcq" and "choices" in q1
 
 
-def test_load_bank_multi_answer(tmp_path):
+def test_plan_copies_multi_answer():
     multi = {
         "questions": [
             {
@@ -410,10 +428,8 @@ def test_load_bank_multi_answer(tmp_path):
             }
         ]
     }
-    p = tmp_path / "multi.yml"
-    p.write_text(yaml.dump(multi), encoding="utf-8")
-    bank = load_bank(p)
-    copies = plan_copies(bank, ["0001"], 1)
+    validate_bank(multi)
+    copies = plan_copies(multi, ["0001"], 1)
     q = copies[0]["questions"][0]
     assert q["multi"] is True
     assert copies[0]["answers"]["q1"] == sorted(
@@ -426,7 +442,5 @@ def test_load_bank_multi_answer(tmp_path):
             {"id": "q1", "text": "t", "choices": [{"text": "a"}, {"text": "b"}]}
         ]
     }
-    p2 = tmp_path / "zero.yml"
-    p2.write_text(yaml.dump(zero), encoding="utf-8")
     with pytest.raises(ValueError, match="at least 1 correct"):
-        load_bank(p2)
+        validate_bank(zero)

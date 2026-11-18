@@ -4,7 +4,7 @@ Checklist for exam day. Steps 1-8 match the pipeline diagram (README) and the qu
 
 | Step | Action | Command | Produces |
 | --- | --- | --- | --- |
-| 1 | Generate the copies | `mini-amc generate --bank bank.yml --copies N --seed S [--students students.csv]` | `data/copy_XXXX.pdf`, `positions.json`, `answers.json`, … |
+| 1 | Generate the copies | `mini-amc generate --bank subject.typ --copies N --seed S [--students students.csv]` | `data/copy_XXXX.pdf`, `positions.json`, `answers.json`, … |
 | 2 | Print | printer, no "fit to page" scaling | paper copies (corners + QR on every page) |
 | 3 | Exam | - | students check the bubbles on paper |
 | 4 | Manual grading (on paper) | blacken ONE lettered grade box per open question | grade boxes in the gray grader area |
@@ -18,14 +18,14 @@ Checklist for exam day. Steps 1-8 match the pipeline diagram (README) and the qu
 - [ ] exam folder scaffolded: `mini-amc init .` (example files + `.gitignore`: `data/`, `scans/`, `preview/` are never committed)
 - [ ] up-to-date environment: `uv sync --all-groups` (committed `uv.lock`)
 - [ ] `typst --version` → `typst 0.15.1`
-- [ ] finalized question bank (`bank.example.yml`, or a Typst subject `subject.typ`): at least 1 `correct: true` per MCQ, at least 2 choices
-- [ ] layout checked on the draft (`typst compile subject.typ` for a Typst subject, `mini-amc preview --png` for the real copy)
+- [ ] finalized subject (`subject.typ`, written with the `amc.typ` prelude): at least 1 `correct: true` per MCQ, at least 2 choices
+- [ ] layout checked on the draft (`typst compile subject.typ`) and on the real copy (`mini-amc preview --png`)
 - [ ] layout checked on one copy: `mini-amc preview --png` (or `--watch` while editing) - quickstart, Step 1
 - [ ] `scans/` empty; previous `data/` archived if reusing the folder
 
 ## Step 1: Copy generation
 
-- [ ] `mini-amc generate --bank <bank.yml|subject.typ> --copies N --seed S` (conventional `./data` and `./scans`)
+- [ ] `mini-amc generate --bank subject.typ --copies N --seed S` (conventional `./data` and `./scans`)
 - [ ] optional `--students students.csv` to link copies to student names (quickstart, Setup): simple `copy_id,name`, or a Moodle export with `--students-id-column` / `--students-name-columns`; row count must equal `--copies`
 - [ ] check `data/copy_XXXX.pdf`, `copy_XXXX.json`, `positions.json`, `answers.json` (and `students.json` if `--students`)
 - [ ] every PDF page carries 4 black corner squares + 1 QR code top right (`copy:XXXX|page:N`)
