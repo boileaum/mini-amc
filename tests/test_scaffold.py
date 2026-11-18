@@ -6,11 +6,14 @@ from mini_amc.scaffold import EXAMPLE_FILES, init_project, main
 def test_init_creates_example_files(tmp_path):
     target = tmp_path / "exam"
     written = init_project(target)
-    assert {p.name for p in written} == set(EXAMPLE_FILES)
+    assert {p.name for p in written} == set(EXAMPLE_FILES) | {".gitignore"}
     for name in EXAMPLE_FILES:
         assert (target / name).exists()
     bank = (target / "bank.example.yml").read_text(encoding="utf-8")
     assert "questions:" in bank
+    gitignore = (target / ".gitignore").read_text(encoding="utf-8")
+    assert "data/" in gitignore
+    assert "scans/" in gitignore
 
 
 def test_init_does_not_overwrite(tmp_path):
@@ -30,3 +33,4 @@ def test_init_main(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "bank.example.yml" in out
     assert (tmp_path / "exam2" / "runbook.md").exists()
+    assert (tmp_path / "exam2" / ".gitignore").exists()

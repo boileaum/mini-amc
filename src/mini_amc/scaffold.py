@@ -13,10 +13,19 @@ EXAMPLE_FILES = [
     "runbook.md",
 ]
 
+# template name -> target dotfile name in the exam project
+DOT_FILES = {
+    "gitignore.example": ".gitignore",
+}
+
 
 def init_project(directory: Path, force: bool = False) -> list[Path]:
     """
     Copy the example files (bank, students CSVs, runbook) into a project dir.
+
+    Also writes a ``.gitignore`` (from ``gitignore.example``) so local data
+    (``data/``, ``scans/``, ``preview/``) is never committed when the exam
+    folder is tracked with git.
 
     Args:
         directory: Target directory (created if missing).
@@ -30,9 +39,10 @@ def init_project(directory: Path, force: bool = False) -> list[Path]:
     """
     directory.mkdir(parents=True, exist_ok=True)
     written = []
-    for name in EXAMPLE_FILES:
-        src = EXAMPLES_DIR / name
-        dst = directory / name
+    targets = [(name, directory / name) for name in EXAMPLE_FILES]
+    targets += [(src, directory / dst) for src, dst in DOT_FILES.items()]
+    for src_name, dst in targets:
+        src = EXAMPLES_DIR / src_name
         if dst.exists() and not force:
             raise FileExistsError(f"{dst} already exists (use --force to overwrite)")
         shutil.copy(src, dst)
@@ -46,7 +56,8 @@ def main(argv: list[str] | None = None) -> None:
 
     Creates an exam project directory with the example files:
     ``bank.example.yml``, ``students.example.csv``,
-    ``students.moodle.example.csv`` and ``runbook.md``.
+    ``students.moodle.example.csv``, ``runbook.md`` and a ``.gitignore``
+    (local data never committed).
 
     Args:
         argv: Command line arguments (defaults to ``sys.argv[1:]``).

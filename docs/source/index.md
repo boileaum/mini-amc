@@ -13,4 +13,5 @@
 quickstart.md
 runbook.md
 api.md
+GitHub repository <https://github.com/boileaum/mini-amc>
 ```

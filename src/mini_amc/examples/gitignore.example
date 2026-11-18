@@ -1,0 +1,7 @@
+# mini-amc exam project — all data stays local, never commit it
+data/
+scans/
+preview/
+__pycache__/
+*.pyc
+.venv/
