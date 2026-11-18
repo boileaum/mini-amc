@@ -1,68 +1,77 @@
 # Runbook — exam day
 
-## Prerequisites
+Checklist for exam day. Steps 1-8 match the pipeline diagram (README) and the quickstart sections; explanations and options are in the [quickstart](https://boileaum.github.io/mini-amc/quickstart.html).
 
-- [ ] exam folder scaffolded: `mini-amc init .` copies the example files here (`bank.example.yml`, `students.example.csv`, `students.moodle.example.csv`, this runbook)
+| Step | Action | Command | Produces |
+| --- | --- | --- | --- |
+| 1 | Generate the copies | `mini-amc generate --bank bank.yml --copies N --seed S [--students students.csv]` | `data/copy_XXXX.pdf`, `positions.json`, `answers.json`, … |
+| 2 | Print | printer, no "fit to page" scaling | paper copies (corners + QR on every page) |
+| 3 | Exam | — | students check the bubbles on paper |
+| 4 | Manual grading (on paper) | blacken ONE lettered grade box per open question | grade boxes in the gray grader area |
+| 5 | Scan | scanner: 150-300 dpi, PNG/JPG, grayscale or color | `scans/` (one file per page) |
+| 6 | OMR | `mini-amc omr` | `data/omr_results.json` + `data/annotated/` |
+| 7 | Review | `mini-amc web --reload` → http://127.0.0.1:8000/copies | `data/corrections.json` |
+| 8 | Grades | `mini-amc grades` | `data/notes.csv` + `data/notes_detail.csv` |
 
+## Prerequisites (setup)
+
+- [ ] exam folder scaffolded: `mini-amc init .` (example files + `.gitignore`: `data/`, `scans/`, `preview/` are never committed)
 - [ ] up-to-date environment: `uv sync --all-groups` (committed `uv.lock`)
 - [ ] `typst --version` → `typst 0.15.1`
-- [ ] finalized question bank (e.g. `bank.example.yml`): at least 1 `correct: true` choice per MCQ (several = multi-answer), at least 2 choices
-- [ ] layout checked on a single copy: `mini-amc preview --png` (or `--watch` while editing)
-- [ ] `scans/` empty, ready to receive the scans
-- [ ] `data/` from the previous exam archived (if reusing the folder)
-- [ ] dev checks pass: `uv run pre-commit run --all-files` and `uv run pre-commit run pytest --all-files --hook-stage pre-push` (plus `coverage` / `coverage-badge`)
+- [ ] finalized question bank (`bank.example.yml`): at least 1 `correct: true` per MCQ, at least 2 choices
+- [ ] layout checked on one copy: `mini-amc preview --png` (or `--watch` while editing) — quickstart §3
+- [ ] `scans/` empty; previous `data/` archived if reusing the folder
 
-## Copy generation (pipeline step 1)
+## Step 1 — Copy generation
 
-- [ ] `mini-amc generate --bank <bank.yml> --copies N --seed S` (all commands use the conventional `./data` and `./scans`)
-- [ ] optional: add `--students students.csv` to link copies to student names — stays local, never committed. Simple format `copy_id,name`, or a Moodle export with `--students-id-column "Numéro étudiant" --students-name-columns "Prénom,Nom"` (delimiter auto-detected, other columns ignored, e.g. students.moodle.example.csv). Row count must equal `--copies`; the link column values become the copy ids (printed as "Copy no." and in the QR)
-- [ ] check the presence of `data/copy_XXXX.pdf`, `data/copy_XXXX.json`, `data/positions.json`, `data/answers.json` (and `data/students.json` if `--students`)
-- [ ] every PDF page carries 4 black corner squares + 1 QR code at the top right (`copy:XXXX|page:N`)
+- [ ] `mini-amc generate --bank <bank.yml> --copies N --seed S` (conventional `./data` and `./scans`)
+- [ ] optional `--students students.csv` to link copies to student names (quickstart §2): simple `copy_id,name`, or a Moodle export with `--students-id-column` / `--students-name-columns`; row count must equal `--copies`
+- [ ] check `data/copy_XXXX.pdf`, `copy_XXXX.json`, `positions.json`, `answers.json` (and `students.json` if `--students`)
+- [ ] every PDF page carries 4 black corner squares + 1 QR code top right (`copy:XXXX|page:N`)
 
-## Printing (pipeline step 2)
+## Step 2 — Printing
 
-- [ ] print the N copies (single-sided recommended but not mandatory — see the note in the quickstart; one copy = 1 or more pages depending on the number of questions)
-- [ ] check on a test copy: corner squares well printed, QR sharp, bubbles not masked
+- [ ] print the N copies, no "fit to page" scaling (single-sided recommended, not mandatory — quickstart §4)
+- [ ] on a test copy: corner squares well printed, QR sharp, bubbles not masked
 
-## Exam (pipeline step 3)
+## Step 3 — Exam
 
-- [ ] instructions: check ONE box per single-answer MCQ (circles), several per multi-answer (squares); open (free-text) questions are left blank during the exam
+- [ ] instructions: ONE box per single-answer MCQ (circles), several per multi-answer (squares); open questions left blank
 - [ ] collect the sheets
 
-## Manual grading (on paper, before scanning) (pipeline step 4)
+## Step 4 — Manual grading (on paper, before scanning)
 
-- [ ] for each open question of each copy, blacken ONE lettered grade box in the gray grader area (A = 0 pt, B = 1 pt, … up to `max_points`)
-- [ ] an open question left ungraded will show `needs_review` after the OMR (still correctable in the review UI)
+- [ ] per open question and copy: blacken ONE lettered grade box in the gray grader area (A = 0 pt, B = 1 pt, … up to `max_points`)
+- [ ] an ungraded open question shows `needs_review` after the OMR (still correctable in the review UI)
 
-## Scanning (pipeline step 5)
+## Step 5 — Scanning
 
-- [ ] scan each sheet into `scans/` (PNG or JPG, 150–300 dpi, page preferably upright)
-- [ ] check that the 4 black corners and the QR are visible on every scan
+- [ ] one file per page into `scans/`: PNG/JPG, 150-300 dpi, grayscale or color (avoid 1-bit B/W if it degrades corners/QR), page preferably upright
+- [ ] the 4 black corners and the QR fully visible on every scan
 
-## OMR (pipeline step 6)
+## Step 6 — OMR
 
 - [ ] `mini-amc omr` (reads `scans/`, writes `data/omr_results.json` + `data/annotated/`)
-- [ ] review `data/omr_results.json` (section `copies`): any copy with status `needs_review`, `partial` (missing page) or `unread` goes to manual review
-- [ ] the straightened and annotated scans (markers, QR, bubbles) are in `data/annotated/` for visual checking
+- [ ] in `omr_results.json` (`copies` section): every `needs_review` / `partial` / `unread` copy goes to manual review
+- [ ] annotated scans (markers, QR, bubbles) in `data/annotated/` for visual checking
 
-## Review (web UI) (pipeline step 7)
+## Step 7 — Review (web UI)
 
 - [ ] `mini-amc web --reload` → http://127.0.0.1:8000/copies
-- [ ] go through the `needs_review` / `partial` / `unread` copies one by one (annotated scan + detected choices)
-- [ ] correct the doubtful answers: `POST /copy/{id}/correction` with `{"qid": ..., "checked": ["B"]}` for an MCQ, `{"qid": ..., "checked": [value]}` to override a misread/ungraded open-question grade box (empty list clears)
-- [ ] save the manual corrections; the score is recomputed on each correction (MCQ: 1 pt; open: the box value)
+- [ ] go through the `needs_review` / `partial` / `unread` copies (annotated scan + detected choices)
+- [ ] correct doubtful answers: `POST /copy/{id}/correction` with `{"qid": ..., "checked": ["B"]}` (MCQ) or `{"qid": ..., "checked": [value]}` (grade-box override; empty list clears) — the score is recomputed on each correction
 
-## Grades (pipeline step 8)
+## Step 8 — Grades
 
-- [ ] `mini-amc grades` (scheme from `data/config.json`, override with `--bareme v1|amc`; manual corrections override the OMR reading)
-- [ ] export check: `data/notes.csv` (one row per copy: `copy_id,student,status,score,score_max`) and `data/notes_detail.csv` (one row per copy/question: `copy_id,qid,type,page,checked,correction,expected,point,needs_review`)
-- [ ] local archiving: `data/` and `scans/` stay on the machine, never in the cloud
+- [ ] `mini-amc grades` (scheme from `data/config.json`, `--bareme v1|amc` overrides; corrections override the OMR reading)
+- [ ] check `data/notes.csv` (`copy_id,student,status,score,score_max`) and `data/notes_detail.csv` (per copy/question)
+- [ ] `data/` and `scans/` stay on the machine, never in the cloud
 
 ## If a step fails
 
-- [ ] generation: read the error message (invalid bank? `typst` not found? seed?). A failure leaves `data/` untouched (staged in `data/.staging`, moved into place only on success); `answers.json` is the answer key
-- [ ] printing: if corners or the QR are cut off, reduce the printer margin (no "fit to page" scaling, which distorts the geometry)
-- [ ] OMR: an unreadable scan → status `unread`, to be handled manually in the review UI; do not blindly re-run
-- [ ] UI: if `data/omr_results.json` is missing, re-run the OMR step first
-- [ ] grades: if `data/positions.json` / `answers.json` is missing, re-run generation with the same seed; an `unread` copy scores 0 until manually reviewed
-- [ ] last resort: start from a clean `data/`, then re-run generation with the same seed (reproducible)
+- [ ] generation: read the error (invalid bank? `typst` missing? seed?); a failure leaves `data/` untouched (staged in `data/.staging`); `answers.json` is the answer key
+- [ ] printing: corners/QR cut off → reduce the printer margin (no "fit to page")
+- [ ] OMR: an unreadable scan → `unread`, handle it in the review UI; do not blindly re-run
+- [ ] UI: missing `data/omr_results.json` → re-run step 6 first
+- [ ] grades: missing `positions.json` / `answers.json` → re-run step 1 with the same seed; an `unread` copy scores 0 until reviewed
+- [ ] last resort: clean `data/`, re-run step 1 with the same seed (reproducible)

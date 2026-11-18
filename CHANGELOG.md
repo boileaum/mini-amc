@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Runbook reworked (more concise, more visual): summary table at the top (steps 1-8 → action / command / output), section titles "Step N — …", bullets tightened with quickstart cross-references, dev-only pre-commit bullet removed from the exam-day checklist. Quickstart section titles shortened to "(step N)".
 - `mini-amc init` now also writes a `.gitignore` (from the packaged `src/mini_amc/examples/gitignore.example`: `data/`, `scans/`, `preview/`, `__pycache__/`, `*.pyc`, `.venv/`) so an exam folder tracked with git never commits local student data. Tests updated; docs: quickstart §2.
 - Pipeline coherence: step numbers are bold (`<b>1</b> · …`) in the README Mermaid diagram; quickstart sections 3-8 and the runbook sections carry the matching "(pipeline step N)" labels; the runbook "If a step fails" section lost its duplicated "generation" bullet. Scan advice (quickstart §5) now says grayscale or color both work, avoid 1-bit B/W if it degrades corners/QR.
 - Sphinx docs: runbook checkboxes are now clickable in the built HTML (`_static/custom.js` re-enables the task-list inputs + localStorage persistence, loaded via `html_js_files`); the left navigation has a "GitHub repository" entry (external toctree link in `index.md`).
