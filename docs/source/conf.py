@@ -26,8 +26,8 @@ myst_fence_as_directive = ["mermaid"]
 # mermaid_width/mermaid_height instead): the defaults stretched every diagram
 # to the full column (width 100%) in a 500px box, i.e. ~2.5x too zoomed.
 # Render at 30% of the column, natural height, with pan/zoom.
-mermaid_width = "30%"
-mermaid_height = "auto"
+mermaid_width = "100%"
+mermaid_height = "1200px"
 mermaid_d3_zoom = True
 
 templates_path = ["_templates"]
