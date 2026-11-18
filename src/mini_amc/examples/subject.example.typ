@@ -2,42 +2,53 @@
 //
 // Generate the copies from this file instead of a YAML bank:
 //   mini-amc generate --bank subject.example.typ --copies 30 --seed 42
-// Preview it while you write (live re-render on save):
+// Check the layout while you write (live re-render on save):
 //   typst watch subject.example.typ subject.pdf
 //
-// `amc.typ` ships next to this file (copied by `mini-amc init`); the texts are
-// markup strings, so `$…$` math and ``` code fences ``` work like in the YAML.
+// `amc.typ` ships next to this file (copied by `mini-amc init`). Questions are
+// values: `#question(...)` returns one and `#exam(...)` takes the array. Split
+// them over several files and join with `+` (see q/chapter.example.typ).
+//
+// A statement is Typst content: a plain string is printed verbatim, so use a
+// content block `[...]` as soon as it needs markup, e.g. `$7 times 8$`.
 
-#import "amc.typ": exam, question, choice
+#import "amc.typ": choice, exam, question, render
+#import "q/chapter.example.typ": questions as chapter
 
-#show: exam.with(
+#let bank = exam(
   title: "Demo exam",
   course: "Demo 101",
   date: "2026-11-12",
+  questions: (
+    question(
+      id: "q1",
+      text: "What is the capital of France?",
+      choices: (
+        choice("Paris", correct: true),
+        choice("Lyon"),
+        choice("Marseille"),
+      ),
+    ),
+    question(
+      id: "q2",
+      text: "What is the largest ocean in the world?",
+      choices: (
+        choice("Atlantic"),
+        choice("Indian"),
+        choice("Pacific", correct: true),
+      ),
+    ),
+    question(
+      id: "q3",
+      text: [What is $7 times 8$?],
+      choices: (
+        choice([$54$]),
+        choice([$56$], correct: true),
+        choice([$63$]),
+      ),
+    ),
+  ) + chapter,
 )
 
-#question(id: "q1", text: "What is the capital of France?")[
-  #choice("Paris", correct: true)
-  #choice("Lyon")
-  #choice("Marseille")
-]
-
-#question(id: "q2", text: "What is the largest ocean in the world?")[
-  #choice("Atlantic")
-  #choice("Indian")
-  #choice("Pacific", correct: true)
-]
-
-#question(id: "q3", text: "What is $7 times 8$?")[
-  #choice("$54$")
-  #choice("$56$", correct: true)
-  #choice("$63$")
-]
-
-#question(id: "q4", text: "In which year did the French Revolution take place?")[
-  #choice("1492")
-  #choice("1789", correct: true)
-  #choice("1815")
-]
-
-#question(id: "q5", type: "open", max-points: 2, text: "Briefly explain the French Revolution.")[]
+// Draft PDF of the subject: `typst compile subject.example.typ`
+#render(bank)

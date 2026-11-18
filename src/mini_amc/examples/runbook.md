@@ -19,6 +19,7 @@ Checklist for exam day. Steps 1-8 match the pipeline diagram (README) and the qu
 - [ ] up-to-date environment: `uv sync --all-groups` (committed `uv.lock`)
 - [ ] `typst --version` → `typst 0.15.1`
 - [ ] finalized question bank (`bank.example.yml`, or a Typst subject `subject.typ`): at least 1 `correct: true` per MCQ, at least 2 choices
+- [ ] layout checked on the draft (`typst compile subject.typ` for a Typst subject, `mini-amc preview --png` for the real copy)
 - [ ] layout checked on one copy: `mini-amc preview --png` (or `--watch` while editing) - quickstart, Step 1
 - [ ] `scans/` empty; previous `data/` archived if reusing the folder
 

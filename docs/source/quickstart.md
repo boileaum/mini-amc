@@ -17,7 +17,7 @@ typst --version         # -> typst 0.15.1
 
 ## Setup: question bank and students
 
-Start from the example files - `mini-amc init` copies them into the exam folder (`bank.example.yml`, `students.example.csv`, `students.moodle.example.csv`, `runbook.md`) and writes a `.gitignore` (`data/`, `scans/`, `preview/`, `.venv/`, …) so that if you track the exam folder with git, the local data (student scans, grades) is never committed:
+Start from the example files - `mini-amc init` copies them into the exam folder (`bank.example.yml`, the Typst subject `amc.typ` + `subject.example.typ` + `q/chapter.example.typ` + `code/fizzbuzz.example.py`, `students.example.csv`, `students.moodle.example.csv`, `runbook.md`) and writes a `.gitignore` (`data/`, `scans/`, `preview/`, `.venv/`, …) so that if you track the exam folder with git, the local data (student scans, grades) is never committed:
 
 ```bash
 mkdir my-exam && cd my-exam && mini-amc init .
@@ -46,32 +46,101 @@ Question and choice texts are parsed as Typst markup, so you can use math (`$E =
 
 `mini-amc init` also copies `amc.typ`, a small prelude that turns the subject
 itself into the bank: same questions, same `--bank` flag, only the file suffix
-changes.
+changes. `#exam`, `#question` and `#choice` return plain values, and
+`#render(bank)` lays the subject out for the draft.
 
 ```typst
-#import "amc.typ": exam, question, choice
+#import "amc.typ": choice, exam, question, render
 
-#show: exam.with(title: "Demo exam", course: "Demo 101", date: "2026-11-12")
+#let bank = exam(
+  title: "Demo exam",
+  course: "Demo 101",
+  date: "2026-11-12",
+  questions: (
+    question(
+      id: "q1",
+      text: "What is the capital of France?",
+      choices: (
+        choice("Paris", correct: true),
+        choice("Lyon"),
+        choice("Marseille"),
+      ),
+    ),
+    question(
+      id: "q5",
+      type: "open",
+      max-points: 2,
+      text: "Briefly explain the French Revolution.",
+    ),
+  ),
+)
 
-#question(id: "q1", text: "What is the capital of France?")[
-  #choice("Paris", correct: true)
-  #choice("Lyon")
-  #choice("Marseille")
-]
-
-#question(id: "q5", type: "open", max-points: 2, text: "Briefly explain the French Revolution.")[]
+#render(bank)   // draft PDF of the subject, without OMR markers nor QR code
 ```
 
 ```bash
+typst watch subject.example.typ subject.pdf     # live re-render on save
 mini-amc generate --bank subject.example.typ --copies 30 --seed 42
-typst watch subject.example.typ subject.pdf    # live preview while writing
 ```
 
-`#exam`, `#question` and `#choice` emit `#metadata`; `mini-amc` runs
-`typst eval` on the file and rebuilds the bank from those entries, so the
-subject you write and the copies the students get never drift apart. Texts are
-markup strings, exactly like in the YAML. The complete example ships as
-[`subject.example.typ`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/subject.example.typ),
+`mini-amc` runs `typst eval` on the file and reads that same value back, so the
+subject you write and the copies the students get cannot drift apart. A mistake
+in a question points at your own file (line and caret) instead of the template.
+
+A statement is Typst content: a plain string is printed verbatim, so use a
+content block as soon as it needs markup.
+
+```typst
+question(
+  id: "q3",
+  text: [What is $7 times 8$?],
+  choices: (choice([$54$]), choice([$56$], correct: true), choice([$63$])),
+)
+```
+
+Split the subject over several files and join the arrays with `+` (one file per
+part of the course, for instance):
+
+```typst
+#import "amc.typ": choice, exam, question, render
+#import "q/chapter1.typ": questions as chapter1
+#import "q/chapter2.typ": questions as chapter2
+
+#let bank = exam(
+  title: "Demo exam",
+  questions: (
+    question(
+      id: "q1",
+      text: "What is the capital of France?",
+      choices: (choice("Paris", correct: true), choice("Lyon")),
+    ),
+  ) + chapter1 + chapter2,
+)
+
+#render(bank)
+```
+
+`read()` pulls in an external file, so a code snippet shown on the copy is the
+real, runnable file - no copy-paste to keep in sync:
+
+```typst
+question(
+  id: "q6",
+  text: [
+    What does this program print?
+
+    #raw(read("code/fizzbuzz.py", encoding: "utf8"), lang: "python")
+  ],
+  choices: (choice("1 2 3"), choice("1 2 Fizz", correct: true), choice("Fizz 2 3")),
+)
+```
+
+The complete example ships as
+[`subject.example.typ`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/subject.example.typ)
+with its second chapter
+[`q/chapter.example.typ`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/q/chapter.example.typ)
+and the external code file
+[`code/fizzbuzz.example.py`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/code/fizzbuzz.example.py),
 next to
 [`amc.typ`](https://github.com/boileaum/mini-amc/blob/main/src/mini_amc/examples/amc.typ).
 

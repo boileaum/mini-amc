@@ -10,6 +10,8 @@ EXAMPLE_FILES = [
     "bank.example.yml",
     "amc.typ",
     "subject.example.typ",
+    "q/chapter.example.typ",
+    "code/fizzbuzz.example.py",
     "students.example.csv",
     "students.moodle.example.csv",
     "runbook.md",
@@ -26,7 +28,9 @@ def init_project(directory: Path, force: bool = False) -> list[Path]:
     Copy the example files into a project dir.
 
     That is the YAML bank, the Typst subject prelude (``amc.typ``) with its
-    example subject, the students CSVs and the runbook.
+    example subject, one example chapter (``q/chapter.example.typ``) reading an
+    external code file (``code/fizzbuzz.example.py``), the students CSVs and
+    the runbook.
 
     Also writes a ``.gitignore`` (from ``gitignore.example``) so local data
     (``data/``, ``scans/``, ``preview/``) is never committed when the exam
@@ -50,6 +54,7 @@ def init_project(directory: Path, force: bool = False) -> list[Path]:
         src = EXAMPLES_DIR / src_name
         if dst.exists() and not force:
             raise FileExistsError(f"{dst} already exists (use --force to overwrite)")
+        dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(src, dst)
         written.append(dst)
     return written
@@ -61,6 +66,7 @@ def main(argv: list[str] | None = None) -> None:
 
     Creates an exam project directory with the example files:
     ``bank.example.yml``, ``amc.typ``, ``subject.example.typ``,
+    ``q/chapter.example.typ``, ``code/fizzbuzz.example.py``,
     ``students.example.csv``, ``students.moodle.example.csv``,
     ``runbook.md`` and a ``.gitignore`` (local data never committed).
 

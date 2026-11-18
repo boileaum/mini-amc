@@ -9,21 +9,24 @@ pytestmark = pytest.mark.skipif(
     shutil.which("typst") is None, reason="typst binary required"
 )
 
+TEMPLATE = Path("src/mini_amc/template")
 MAX_PAGES = 64
 N_QUESTIONS = 40
 
 
 def _build_copy(dir_path: Path) -> None:
-    shutil.copy(Path("src/mini_amc/template/main.typ"), dir_path / "main.typ")
+    shutil.copy(TEMPLATE / "main.typ", dir_path / "main.typ")
+    # YAML bank through the adapter: the template only sees `bank`, whatever
+    # the authoring format
+    shutil.copy(TEMPLATE / "bank-json.typ", dir_path / "bank.typ")
     questions: list[dict] = [
         {
             "id": f"q{i}",
             "text": f"Question number {i}?",
-            "type": "mcq",
             "choices": [
-                {"key": "A", "text": f"choice A {i}", "correct": False},
-                {"key": "B", "text": f"choice B {i}", "correct": True},
-                {"key": "C", "text": f"choice C {i}", "correct": False},
+                {"text": f"choice A {i}"},
+                {"text": f"choice B {i}", "correct": True},
+                {"text": f"choice C {i}"},
             ],
         }
         for i in range(1, N_QUESTIONS + 1)
@@ -36,12 +39,32 @@ def _build_copy(dir_path: Path) -> None:
             "max_points": 3,
         }
     )
-    copy = {
+    (dir_path / "bank.json").write_text(
+        json.dumps(
+            {
+                "meta": {"title": "Test", "course": "T", "date": "2026-11-13"},
+                "questions": questions,
+            }
+        ),
+        encoding="utf-8",
+    )
+    plan = {
         "copy_id": "9999",
-        "meta": {"title": "Test", "course": "T", "date": "2026-11-13"},
-        "questions": questions,
+        "questions": [
+            {
+                "id": q["id"],
+                "src": i,
+                "type": q.get("type", "mcq"),
+                "multi": False,
+                "choices": [
+                    {"key": key, "src": j}
+                    for j, key in enumerate("ABC"[: len(q.get("choices", []))])
+                ],
+            }
+            for i, q in enumerate(questions)
+        ],
     }
-    (dir_path / "copy.json").write_text(json.dumps(copy), encoding="utf-8")
+    (dir_path / "copy.json").write_text(json.dumps(plan), encoding="utf-8")
     import qrcode
 
     for n in range(1, MAX_PAGES + 1):

@@ -6,7 +6,9 @@ from mini_amc.scaffold import EXAMPLE_FILES, init_project, main
 def test_init_creates_example_files(tmp_path):
     target = tmp_path / "exam"
     written = init_project(target)
-    assert {p.name for p in written} == set(EXAMPLE_FILES) | {".gitignore"}
+    assert {p.relative_to(target).as_posix() for p in written} == set(EXAMPLE_FILES) | {
+        ".gitignore"
+    }
     for name in EXAMPLE_FILES:
         assert (target / name).exists()
     bank = (target / "bank.example.yml").read_text(encoding="utf-8")

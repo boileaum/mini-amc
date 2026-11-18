@@ -9,6 +9,7 @@ from pathlib import Path
 
 from mini_amc.gen.generate import (
     compile_copy,
+    compile_root,
     default_template,
     load_bank,
     plan_copies,
@@ -23,7 +24,7 @@ def write_copy_json(build_dir: Path, bank_path: Path, seed: int) -> Path:
 
     Args:
         build_dir: Build directory produced by :func:`compile_copy`.
-        bank_path: Question bank YAML.
+        bank_path: Question bank (YAML or Typst subject).
         seed: Shuffle seed.
 
     Returns:
@@ -42,7 +43,7 @@ def build_preview(bank_path: Path, out_dir: Path, seed: int, template: Path) -> 
     Generate and compile one preview copy.
 
     Args:
-        bank_path: Question bank YAML.
+        bank_path: Question bank (YAML or Typst subject).
         out_dir: Preview output directory (``./preview`` by default).
         seed: Shuffle seed (fixed by default for a stable preview).
         template: Template directory.
@@ -55,17 +56,22 @@ def build_preview(bank_path: Path, out_dir: Path, seed: int, template: Path) -> 
     copy_json = {k: v for k, v in copy.items() if k != "answers"}
     out_dir.mkdir(parents=True, exist_ok=True)
     pdf = out_dir / f"copy_{PREVIEW_COPY_ID}.pdf"
-    compile_copy(template, copy_json, pdf)
+    compile_copy(template, bank_path, copy_json, pdf)
     return pdf
 
 
-def render_pngs(build_dir: Path, out_dir: Path, ppi: int = 120) -> list[Path]:
+def render_pngs(
+    build_dir: Path, out_dir: Path, root: str, ppi: int = 120
+) -> list[Path]:
     """
     Render the preview PDF pages to PNG (via ``typst compile`` in the build dir).
 
     Args:
-        build_dir: Build directory (self-contained: main.typ, copy.json, qr PNGs).
+        build_dir: Build directory (self-contained: main.typ, bank.typ,
+            copy.json, QR PNGs).
         out_dir: Where to write ``page-N.png``.
+        root: Typst root directory (the template imports the bank from
+            outside the build dir).
         ppi: Render resolution.
 
     Returns:
@@ -82,6 +88,8 @@ def render_pngs(build_dir: Path, out_dir: Path, ppi: int = 120) -> list[Path]:
             str(out_dir / "page-{p}.png"),
             "--ppi",
             str(ppi),
+            "--root",
+            root,
         ],
         cwd=build_dir,
         capture_output=True,
@@ -129,10 +137,11 @@ def main(argv: list[str] | None = None) -> None:
 
     pdf = build_preview(args.bank, args.out, args.seed, args.template)
     build_dir = args.out / "build" / PREVIEW_COPY_ID
+    root = compile_root(args.bank, build_dir)
     print(f"preview PDF: {pdf}")
     if args.png:
         # absolute path: typst runs with cwd=build_dir
-        pngs = render_pngs(build_dir, args.out.resolve())
+        pngs = render_pngs(build_dir, args.out.resolve(), root)
         print(f"preview PNGs: {', '.join(p.name for p in pngs)}")
     if not args.watch:
         return
@@ -141,7 +150,7 @@ def main(argv: list[str] | None = None) -> None:
     # thread regenerates copy.json when the bank file changes
     procs = [
         subprocess.Popen(
-            ["typst", "watch", "main.typ", str(pdf.resolve())],
+            ["typst", "watch", "main.typ", str(pdf.resolve()), "--root", root],
             cwd=build_dir,
         )
     ]
@@ -155,6 +164,8 @@ def main(argv: list[str] | None = None) -> None:
                     str((args.out / "page-{p}.png").resolve()),
                     "--ppi",
                     "120",
+                    "--root",
+                    root,
                 ],
                 cwd=build_dir,
             )

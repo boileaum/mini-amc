@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 
@@ -27,17 +28,19 @@ def test_compile_fixture(tmp_path):
     import qrcode
 
     template = Path("src/mini_amc/template")
-    shutil.copy(template / "copy.example.json", template / "copy.json")
+    subject = Path("src/mini_amc/examples/subject.example.typ").resolve()
+    shutil.copy(template / "main.typ", tmp_path / "main.typ")
+    shutil.copy(template / "copy.example.json", tmp_path / "copy.json")
+    # the template imports `bank`: point it at the example subject (the build
+    # dir is a throwaway one, so the import is absolute and the root is /)
+    (tmp_path / "bank.typ").write_text(
+        f"#import {json.dumps(subject.as_posix())}: bank\n", encoding="utf-8"
+    )
     for n in range(1, 65):
-        qrcode.make(f"copy:0001|page:{n}").save(template / f"qr-{n}.png")
-    try:
-        subprocess.run(
-            ["typst", "compile", "main.typ", str(tmp_path / "copy.pdf")],
-            cwd=template,
-            check=True,
-        )
-        assert (tmp_path / "copy.pdf").stat().st_size > 0
-    finally:
-        (template / "copy.json").unlink(missing_ok=True)
-        for n in range(1, 65):
-            (template / f"qr-{n}.png").unlink(missing_ok=True)
+        qrcode.make(f"copy:0001|page:{n}").save(tmp_path / f"qr-{n}.png")
+    subprocess.run(
+        ["typst", "compile", "main.typ", str(tmp_path / "copy.pdf"), "--root", "/"],
+        cwd=tmp_path,
+        check=True,
+    )
+    assert (tmp_path / "copy.pdf").stat().st_size > 0

@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from mini_amc.gen.generate import compile_root
 from mini_amc.preview import build_preview, main, render_pngs, write_copy_json
 
 BANK = Path("src/mini_amc/examples/bank.example.yml")
@@ -22,7 +23,8 @@ def test_build_preview_creates_pdf(tmp_path):
 def test_render_pngs(tmp_path):
     out = tmp_path / "preview"
     build_preview(BANK, out, 42, TEMPLATE)
-    pngs = render_pngs(out / "build" / "0001", out)
+    build = out / "build" / "0001"
+    pngs = render_pngs(build, out, compile_root(BANK, build))
     assert pngs and pngs[0].stat().st_size > 10000
 
 

@@ -1,3 +1,11 @@
+// One exam copy. The build directory is self-contained (main.typ, bank.typ,
+// copy.json, qr-N.png): `typst compile main.typ out.pdf` works there as is.
+//
+// `bank` is the exam as the author wrote it (a Typst subject, or a YAML bank
+// through bank-json.typ); `copy.json` is the plan: which source question and
+// which source choice go where on this copy. The statements therefore reach
+// the PDF as the author's content, never as a re-parsed string.
+#import "bank.typ": bank
 #let copy = json("copy.json")
 
 #let marker = 1.2cm
@@ -30,9 +38,9 @@
 #v(0.8cm)
 
 #align(center)[
-  #text(16pt, weight: "bold")[#copy.meta.title]
+  #text(16pt, weight: "bold")[#bank.at("title", default: "")]
   #linebreak()
-  #text(12pt)[#copy.meta.course - #copy.meta.date]
+  #text(12pt)[#bank.at("course", default: "") - #bank.at("date", default: "")]
   #linebreak()
   #text(12pt)[Copy no. #copy.copy_id]
   // with --students, also print the student name on the copy
@@ -44,13 +52,11 @@
 
 #v(1cm)
 
-#for q in copy.questions [
+#for p in copy.questions [
+  #let q = bank.questions.at(p.src)
   #block(breakable: false)[
     #context [#metadata((kind: "question", copy: copy.copy_id, qid: q.id, page: here().page(), x: here().position().x, y: here().position().y))]
-    // eval(mode: "markup"): the bank text is parsed as Typst markup, so
-    // $…$ math and ``` code fences in the YAML render properly
-    #text(weight: "bold")[#q.id - #eval(q.text, mode: "markup")]
-    // .at(default:) keeps hand-written copy.json files (without "type") working
+    #text(weight: "bold")[#q.id - #q.text]
     #if q.at("type", default: "mcq") == "open" [
       #block(width: 100%, height: 3cm, stroke: 0.5pt)
       #v(0.2cm)
@@ -59,7 +65,7 @@
       // instead of numbers so they don't suggest a scale - the numeric value
       // stays in the #metadata, which is what the OMR reads
       #box(fill: luma(235), inset: 0.3em)[
-        #for v in range(0, q.max_points + 1) [
+        #for v in range(0, q.at("max-points", default: 1) + 1) [
           #context [#metadata((kind: "gradebox", copy: copy.copy_id, qid: q.id, value: v, page: here().page(), x: here().position().x, y: here().position().y))]
           #box(circle(radius: 4.5pt, stroke: 1pt))
           #h(0.3em)
@@ -69,15 +75,16 @@
       ]
     ] else [
       // multi-answer questions get square bubbles (single-answer: circles)
-      #let multi = q.at("multi", default: false)
-      #for c in q.choices [
+      #let multi = p.at("multi", default: false)
+      #for c in p.choices [
+        #let source = q.choices.at(c.src)
         #block[
           #context [#metadata((kind: "bubble", copy: copy.copy_id, qid: q.id, key: c.key, multi: multi, shape: if multi { "square" } else { "circle" }, page: here().page(), x: here().position().x, y: here().position().y))]
           #box(if multi { square(size: 9pt, stroke: 1pt) } else { circle(radius: 4.5pt, stroke: 1pt) })
           #h(0.4em)
           // no letter printed on the student copy: the key stays in the
           // #metadata (OMR) and in copy_XXXX.json / answers.json
-          #eval(c.text, mode: "markup")
+          #source.text
         ]
       ]
     ]

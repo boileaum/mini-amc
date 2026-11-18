@@ -4,20 +4,26 @@
   "questions": [
     {
       "id": "q2",
-      "text": "What is 7 × 8?",
+      "src": 1,
+      "text": "What is the largest ocean in the world?",
+      "type": "mcq",
+      "multi": false,
       "choices": [
-        { "key": "A", "text": "54", "correct": false },
-        { "key": "B", "text": "56", "correct": true },
-        { "key": "C", "text": "63", "correct": false }
+        { "key": "A", "src": 0, "text": "Atlantic", "correct": false },
+        { "key": "B", "src": 2, "text": "Pacific", "correct": true },
+        { "key": "C", "src": 1, "text": "Indian", "correct": false }
       ]
     },
     {
       "id": "q1",
+      "src": 0,
       "text": "What is the capital of France?",
+      "type": "mcq",
+      "multi": false,
       "choices": [
-        { "key": "A", "text": "Lyon", "correct": false },
-        { "key": "B", "text": "Paris", "correct": true },
-        { "key": "C", "text": "Marseille", "correct": false }
+        { "key": "A", "src": 1, "text": "Lyon", "correct": false },
+        { "key": "B", "src": 0, "text": "Paris", "correct": true },
+        { "key": "C", "src": 2, "text": "Marseille", "correct": false }
       ]
     }
   ]

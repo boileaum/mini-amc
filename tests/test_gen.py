@@ -8,6 +8,7 @@ import yaml
 
 from mini_amc.gen.generate import (
     compile_copy,
+    compile_root,
     export_positions,
     load_bank,
     plan_copies,
@@ -64,9 +65,9 @@ def test_compile_and_positions(tmp_path):
         cid = c["copy_id"]
         copy_json = {k: v for k, v in c.items() if k != "answers"}
         pdf = tmp_path / f"copy_{cid}.pdf"
-        build = compile_copy(TEMPLATE, copy_json, pdf)
+        build = compile_copy(TEMPLATE, BANK, copy_json, pdf)
         assert pdf.stat().st_size > 0
-        pos = export_positions(build, cid)
+        pos = export_positions(build, cid, compile_root(BANK, build))
         n_choices = sum(len(q.get("choices", [])) for q in c["questions"])
         n_gradeboxes = sum(
             q.get("max_points", 0) + 1
@@ -171,11 +172,11 @@ def test_main_failure_leaves_out_untouched(tmp_path, monkeypatch):
     real_compile = gen.compile_copy
     calls = {"n": 0}
 
-    def flaky(template_dir, copy, out_pdf):
+    def flaky(template_dir, bank_path, copy, out_pdf):
         calls["n"] += 1
         if calls["n"] == 2:
             raise RuntimeError("boom")
-        return real_compile(template_dir, copy, out_pdf)
+        return real_compile(template_dir, bank_path, copy, out_pdf)
 
     monkeypatch.setattr(gen, "compile_copy", flaky)
     monkeypatch.setattr(

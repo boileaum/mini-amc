@@ -4,12 +4,14 @@ import argparse
 import csv
 import io
 import json
+import os
 import random
 import re
 import shutil
 import string
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import qrcode
 import yaml
@@ -60,15 +62,66 @@ def load_bank(path: Path) -> dict:
     return data
 
 
+def flatten_content(value: Any) -> str:
+    """
+    Flatten a Typst value to plain text.
+
+    A statement written in a subject is Typst content: ``typst eval``
+    serialises it as nested ``{"func": …}`` nodes, which the review UI and the
+    validation cannot use. The PDF keeps the original content; this is only
+    the readable projection stored in ``copy_XXXX.json``. Plain strings
+    (``choice("Paris")``) are returned as is.
+
+    Args:
+        value: String, content node, or list of nodes.
+
+    Returns:
+        The text, one line per content line (indentation of code blocks kept),
+        with runs of blank lines collapsed.
+    """
+    # indentation is meaningful in a code block, so only trailing spaces are
+    # dropped; a single blank line keeps the paragraphs readable
+    lines: list[str] = []
+    for line in _flatten(value).splitlines():
+        line = line.rstrip()
+        if line or (lines and lines[-1]):
+            lines.append(line)
+    return "\n".join(lines).strip()
+
+
+def _flatten(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "".join(_flatten(item) for item in value)
+    if not isinstance(value, dict):
+        return ""
+    func = value.get("func")
+    if func == "space":
+        return " "
+    if func == "linebreak":
+        return "\n"
+    if func == "parbreak":
+        return "\n\n"
+    if func == "equation":
+        body = _flatten(value.get("body"))
+        return f"$ {body} $" if value.get("block") else f"${body}$"
+    if "text" in value:
+        return str(value["text"])
+    if "body" in value:
+        return _flatten(value["body"])
+    return _flatten(value.get("children", []))
+
+
 def load_bank_from_typ(path: Path) -> dict:
     """
     Read a Typst subject (``amc.typ`` prelude) back into a question bank.
 
-    Runs ``typst eval 'query(metadata).map(it => it.value)'`` in the subject's
-    directory, so its ``#import "amc.typ": …`` resolves, then rebuilds the
-    bank from the emitted entries: the ``meta`` entry carries the header, and
-    each ``question`` entry is followed by its ``choice`` entries in document
-    order (that order is what attaches a choice to its question).
+    Runs ``typst eval`` on an expression that imports the subject and returns
+    its ``bank`` value, so the bank is read from the same value the template
+    renders: no second parsing of the document, no ``eval`` of the statements.
+    The statements are then flattened to plain text (see
+    :func:`flatten_content`).
 
     Args:
         path: Subject file (e.g. ``subject.example.typ``).
@@ -77,15 +130,19 @@ def load_bank_from_typ(path: Path) -> dict:
         The bank (dict with ``meta`` and ``questions``), not yet validated.
 
     Raises:
-        RuntimeError: ``typst`` missing from PATH or the subject fails to
-            evaluate (a bad ``#question`` call, a missing ``amc.typ``, …).
-        ValueError: A ``#choice`` outside a multiple-choice ``#question``, or
-            a subject without any ``#question``.
+        RuntimeError: ``typst`` missing from PATH, or the subject fails to
+            evaluate (a bad ``#question`` call, a missing ``amc.typ``, no
+            ``bank`` value, …).
+        ValueError: The subject defines no question.
     """
     typst = _require_typst()
     subject = path.resolve()
+    # the eval expression imports the subject by name (cwd is the subject's
+    # directory, so its relative imports resolve as usual); json.dumps gives a
+    # Typst-compatible string literal, quotes and backslashes included
+    code = f"{{ import {json.dumps(subject.name)}: bank; bank }}"
     proc = subprocess.run(
-        [typst, "eval", "query(metadata).map(it => it.value)", "--in", subject.name],
+        [typst, "eval", code, "--in", subject.name, "--format", "json"],
         cwd=subject.parent,
         capture_output=True,
         text=True,
@@ -94,31 +151,29 @@ def load_bank_from_typ(path: Path) -> dict:
         raise RuntimeError(
             f"typst eval failed for subject {subject.name}:\n{proc.stderr}"
         )
-    meta: dict = {}
-    questions: list[dict] = []
-    for entry in json.loads(proc.stdout):
-        kind = entry.get("kind")
-        if kind == "meta":
-            meta = {k: entry[k] for k in ("title", "course", "date") if k in entry}
-        elif kind == "question":
-            question: dict = {"id": entry.get("id"), "text": entry.get("text", "")}
-            if entry.get("type", "mcq") == "open":
-                question["type"] = "open"
-                question["max_points"] = entry.get("max_points")
-            else:
-                question["choices"] = []
-            questions.append(question)
-        elif kind == "choice":
-            if not questions or "choices" not in questions[-1]:
-                raise ValueError(
-                    f"{subject.name}: #choice outside a multiple-choice #question"
-                )
-            questions[-1]["choices"].append(
+    data = json.loads(proc.stdout)
+    if not isinstance(data, dict):
+        raise ValueError(f"{subject.name}: 'bank' must be an #exam(...) value")
+    meta = {key: str(data.get(key, "")) for key in ("title", "course", "date")}
+    questions = []
+    for entry in data.get("questions", []):
+        qid = entry.get("id")
+        question: dict = {
+            "id": None if qid is None else str(qid),
+            "text": flatten_content(entry.get("text", "")),
+            "type": entry.get("type", "mcq"),
+        }
+        if question["type"] == "open":
+            question["max_points"] = entry.get("max-points")
+        else:
+            question["choices"] = [
                 {
-                    "text": entry.get("text", ""),
-                    "correct": bool(entry.get("correct", False)),
+                    "text": flatten_content(choice.get("text", "")),
+                    "correct": bool(choice.get("correct", False)),
                 }
-            )
+                for choice in entry.get("choices", [])
+            ]
+        questions.append(question)
     if not questions:
         raise ValueError(f"{subject.name}: no #question found")
     return {"meta": meta, "questions": questions}
@@ -253,8 +308,10 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
     Plan the copies: seeded shuffle of questions and choices.
 
     The bank is not mutated. Each copy gets keys A, B, C… reassigned
-    according to the shuffled order, and an ``answers`` dict
-    (``qid`` -> correct key).
+    according to the shuffled order, an ``answers`` dict (``qid`` -> correct
+    key) and, per question and choice, the ``src`` index it comes from in the
+    bank. The template renders the copy from those indices, so the statements
+    reach the PDF as the author's content instead of a flattened copy.
 
     Args:
         bank: Bank validated by :func:`load_bank`.
@@ -265,7 +322,8 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
 
     Returns:
         List of copies, each with ``copy_id``, ``meta``, ``questions``
-        and ``answers``.
+        (``id``, ``src``, ``text``, ``type``, ``choices`` with ``key``,
+        ``src``, ``text``, ``correct``) and ``answers``.
 
     Raises:
         ValueError: Empty or duplicate ``copy_ids``.
@@ -282,11 +340,13 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
     for copy_id in copy_ids:
         answers = {}
         copy_questions = []
-        for q in rng.sample(questions, len(questions)):
+        for src in rng.sample(range(len(questions)), len(questions)):
+            q = questions[src]
             if q.get("type", "mcq") == "open":
                 copy_questions.append(
                     {
                         "id": q["id"],
+                        "src": src,
                         "text": q["text"],
                         "type": "open",
                         "max_points": q["max_points"],
@@ -294,16 +354,22 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
                 )
                 answers[q["id"]] = "open"
                 continue
-            choices = rng.sample(q["choices"], len(q["choices"]))
             copy_choices = []
             correct_keys = []
             # keys reassigned A, B, C… in shuffled order; load_bank caps
             # choices at 26, so the zip never truncates
-            for c, key in zip(choices, string.ascii_uppercase, strict=False):
+            order = rng.sample(range(len(q["choices"])), len(q["choices"]))
+            for src_choice, key in zip(order, string.ascii_uppercase, strict=False):
+                choice = q["choices"][src_choice]
                 copy_choices.append(
-                    {"key": key, "text": c["text"], "correct": bool(c.get("correct"))}
+                    {
+                        "key": key,
+                        "src": src_choice,
+                        "text": choice["text"],
+                        "correct": bool(choice.get("correct")),
+                    }
                 )
-                if c.get("correct"):
+                if choice.get("correct"):
                     correct_keys.append(key)
             # answers: sorted list of correct keys (a single key for
             # single-answer MCQ, several for multi-answer)
@@ -311,6 +377,7 @@ def plan_copies(bank: dict, copy_ids: list[str], seed: int) -> list[dict]:
             copy_questions.append(
                 {
                     "id": q["id"],
+                    "src": src,
                     "text": q["text"],
                     "type": "mcq",
                     "multi": len(correct_keys) > 1,
@@ -337,17 +404,73 @@ def _require_typst() -> str:
     return typst
 
 
-def compile_copy(template_dir: Path, copy: dict, out_pdf: Path) -> Path:
+def compile_root(bank_path: Path, build_dir: Path) -> str:
+    """
+    Directory to pass as ``--root``: the closest one containing both.
+
+    Typst refuses to read a file outside the root, and the template imports
+    the bank from the build dir: the root must cover both. It falls back to
+    ``/`` when the bank lives outside the output tree, which keeps working
+    without widening anything else.
+
+    Args:
+        bank_path: Question bank path.
+        build_dir: Build directory of the copy.
+
+    Returns:
+        The root directory, as a string.
+    """
+    paths = [bank_path.resolve().parent, build_dir.resolve()]
+    return str(Path(os.path.commonpath([str(p) for p in paths])))
+
+
+def write_bank_module(template_dir: Path, bank_path: Path, build: Path) -> None:
+    """
+    Write the ``bank.typ`` module the template imports.
+
+    A Typst subject is imported as is (one line, so the statements stay the
+    author's content). A YAML bank goes through ``bank-json.typ``, which reads
+    ``bank.json`` and re-parses the statements as markup.
+
+    Args:
+        template_dir: Template directory (its ``bank-json.typ`` wins over the
+            packaged one, so a local template can adapt the YAML path).
+        bank_path: Question bank path.
+        build: Build directory.
+    """
+    if bank_path.suffix.lower() == ".typ":
+        # relative import: the build dir sits under the output dir, not next to
+        # the subject; --root (see compile_root) makes the .. path legal
+        relative = Path(os.path.relpath(bank_path.resolve(), build.resolve()))
+        (build / "bank.typ").write_text(
+            f"#import {json.dumps(relative.as_posix())}: bank\n", encoding="utf-8"
+        )
+        return
+    (build / "bank.json").write_text(
+        json.dumps(load_bank(bank_path), ensure_ascii=False), encoding="utf-8"
+    )
+    adapter = template_dir / "bank-json.typ"
+    shutil.copy(
+        adapter if adapter.exists() else PACKAGED_TEMPLATE / "bank-json.typ",
+        build / "bank.typ",
+    )
+
+
+def compile_copy(
+    template_dir: Path, bank_path: Path, copy: dict, out_pdf: Path
+) -> Path:
     """
     Compile one copy to PDF via ``typst compile``.
 
     Prepares an isolated build directory (``<out>/build/<copy_id>/``:
-    ``main.typ`` + ``copy.json`` + ``qr-1..MAX_PAGES.png``) because Typst
-    resolves relative paths against the compiled file.
+    ``main.typ`` + ``bank.typ`` + ``copy.json`` + ``qr-1..MAX_PAGES.png``)
+    because Typst resolves relative paths against the compiled file.
 
     Args:
         template_dir: Directory containing ``main.typ``.
-        copy: Copy (dict without ``answers``) written as ``copy.json``.
+        bank_path: Question bank (``.typ`` subject or YAML file) the copy is
+            rendered from.
+        copy: Copy plan (dict without ``answers``) written as ``copy.json``.
         out_pdf: Output PDF path.
 
     Returns:
@@ -362,6 +485,7 @@ def compile_copy(template_dir: Path, copy: dict, out_pdf: Path) -> Path:
     build = out_pdf.parent / "build" / copy_id
     build.mkdir(parents=True, exist_ok=True)
     shutil.copy(template_dir / "main.typ", build / "main.typ")
+    write_bank_module(template_dir, bank_path, build)
     (build / "copy.json").write_text(
         json.dumps(copy, ensure_ascii=False), encoding="utf-8"
     )
@@ -369,7 +493,14 @@ def compile_copy(template_dir: Path, copy: dict, out_pdf: Path) -> Path:
         qrcode.make(f"copy:{copy_id}|page:{n}").save(build / f"qr-{n}.png")
     out_pdf.parent.mkdir(parents=True, exist_ok=True)
     proc = subprocess.run(
-        [typst, "compile", "main.typ", str(out_pdf.resolve())],
+        [
+            typst,
+            "compile",
+            "main.typ",
+            str(out_pdf.resolve()),
+            "--root",
+            compile_root(bank_path, build),
+        ],
         cwd=build,
         capture_output=True,
         text=True,
@@ -386,7 +517,7 @@ def compile_copy(template_dir: Path, copy: dict, out_pdf: Path) -> Path:
     return build
 
 
-def export_positions(build_dir: Path, copy_id: str) -> dict:
+def export_positions(build_dir: Path, copy_id: str, root: str) -> dict:
     """
     Extract the bubble positions of a copy via ``typst eval``.
 
@@ -396,6 +527,8 @@ def export_positions(build_dir: Path, copy_id: str) -> dict:
     Args:
         build_dir: Build directory produced by :func:`compile_copy`.
         copy_id: Copy identifier (key in ``positions.json``).
+        root: Typst root directory (see :func:`compile_root`): the template
+            imports the bank from outside the build dir.
 
     Returns:
         Dict with ``copy_id``, ``page`` (``w_pt``/``h_pt``), ``questions``,
@@ -408,7 +541,15 @@ def export_positions(build_dir: Path, copy_id: str) -> dict:
     """
     _require_typst()
     proc = subprocess.run(
-        ["typst", "eval", "query(metadata).map(it => it.value)", "--in", "main.typ"],
+        [
+            "typst",
+            "eval",
+            "query(metadata).map(it => it.value)",
+            "--in",
+            "main.typ",
+            "--root",
+            root,
+        ],
         cwd=build_dir,
         capture_output=True,
         text=True,
@@ -534,9 +675,11 @@ def main(argv: list[str] | None = None) -> None:
                 json.dumps(copy_json, indent=2, ensure_ascii=False), encoding="utf-8"
             )
             build = compile_copy(
-                args.template, copy_json, stage / f"copy_{copy_id}.pdf"
+                args.template, args.bank, copy_json, stage / f"copy_{copy_id}.pdf"
             )
-            positions[copy_id] = export_positions(build, copy_id)
+            positions[copy_id] = export_positions(
+                build, copy_id, compile_root(args.bank, build)
+            )
         (stage / "positions.json").write_text(
             json.dumps(positions, indent=2, ensure_ascii=False), encoding="utf-8"
         )

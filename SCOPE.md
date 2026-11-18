@@ -7,7 +7,7 @@ The whole project is in English: code, docstrings, comments, documentation, CLI 
 
 Included:
 
-- Question bank in YAML (``bank.example.yml``) or written directly in Typst with the ``amc.typ`` prelude: ``#exam``/``#question``/``#choice`` emit ``#metadata``, which ``typst eval`` reads back into the same bank structure, so both authoring paths feed the same pipeline and the rendering template is unchanged.
+- Question bank in YAML (``bank.example.yml``) or written directly in Typst with the ``amc.typ`` prelude. In the Typst path the subject *is* the bank: ``#choice``/``#question``/``#exam`` return plain values (dictionaries) and ``#render(bank)`` lays out the draft, so a broken question fails in the author's own file (line + caret) and statements are real Typst content (``$math$``, ``raw``, emphasis) instead of strings re-parsed at render time. ``mini-amc`` reads that value back with ``typst eval '{ import "subject.typ": bank; bank }'`` (``--in`` does not expose bindings), flattens the content to plain text for the UI/validation, and feeds the same pipeline as the YAML path. Subjects can be split over several files (arrays joined with ``+``) and pull external files in with ``read()`` (e.g. the Python snippet shown on the copy).
 - MCQ, single-answer (circle bubbles) or multi-answer (square bubbles, several `correct: true` choices): 1 pt iff the checked set equals the expected set.
 - Open (free-text) questions graded by the teacher on the paper copy, before scanning: the copy shows a free area + a gray grader area with lettered grade boxes A, B, … (box value = letter index, 0..max_points); the OMR reads the blackened box and the score is its value; ungraded (no box) → `needs_review`, still correctable in the review UI.
 - Named grading schemes (``BAREMES`` in `grade/notes.py`), chosen per exam in ``data/config.json`` (written by `generate`, default ``v1``), overridable with ``--bareme`` on `grades`/`web`: ``v1`` = 1 pt iff the checked set equals the expected set, else 0; ``amc`` = +1 per correct checked, -1 per wrong checked, floored at 0 per question. Open questions score their box value (0..max_points) under all schemes. ``notes.csv`` has a ``bareme`` column.
@@ -35,7 +35,7 @@ The rollout backlog (nominative CSV link, grader-blackened free-text fields) is 
   - bubble positions are extracted in D2/D3 via `typst eval` on `#metadata(...)`.
 - On EVERY page: 4 black alignment squares in the corners + 1 QR code (text content `copy:XXXX|page:N`) at the top right.
 - Typst CLI pinned to v0.15.1 (official binary); `src/mini_amc/template/typst.toml` contains `compiler = "0.15.1"`. The pin is an exact version on purpose (the template relies on 0.15 syntax, e.g. `top + left` compound alignments, and on `eval(s, mode: "markup")` semantics). To allow a different local binary, edit that `compiler` field in `src/mini_amc/template/typst.toml` - `typst compile` then warns/refuses on a version mismatch, which is the intended guard, not a bug.
-- Bank texts (question + choices) are parsed as Typst markup in the template (`#eval(text, mode: "markup")`), so `$…$` math and fenced code blocks work in the YAML bank.
+- Bank texts are Typst content. The Typst subject path passes real content through (no re-parsing). The YAML path is the only one that needs an adapter: `src/mini_amc/template/bank-json.typ` reads `bank.json` and turns each `text` into markup with `eval(str(text), mode: "markup")`, so `$…$` math and fenced code blocks still work in YAML. Both paths end up as the same `bank` value in the template build dir (`bank.typ`: one `#import` for a subject, the adapter for YAML), so the rendering template knows nothing about YAML.
 - Typst 0.15 syntax: compound alignments are written `top + left` (not `top-left`).
 - Python stack pinned exactly in `pyproject.toml` (`==`) + committed `uv.lock`: opencv-python-headless==5.0.0.93, numpy==2.5.4, pillow==13.0.0, qrcode==8.2, PyYAML==6.0.3, fastapi==0.162.5, uvicorn==0.54.0.
 - QR reading on the OMR side with `cv2.QRCodeDetector` (no pyzbar, no system dependency).
@@ -48,13 +48,15 @@ The rollout backlog (nominative CSV link, grader-blackened free-text fields) is 
 | File | Role | Produced by |
 | --- | --- | --- |
 | `src/mini_amc/examples/bank.example.yml` | Question bank (example, copied by `mini-amc init`): MCQ (`choices` + one `correct`) and open questions (`type: open`, `max_points`) | manual input |
-| `src/mini_amc/examples/amc.typ` | Subject prelude (copied by `mini-amc init`): `#exam`, `#question`, `#choice` emit `#metadata` (header, question, choice) and render the subject | manual input |
-| `src/mini_amc/examples/subject.example.typ` | Example subject written with the prelude (same questions as the YAML example); `--bank subject.typ` reads it back | manual input |
+| `src/mini_amc/examples/amc.typ` | Subject prelude (copied by `mini-amc init`): `#choice`/`#question`/`#exam` return values, `#render(bank)` renders the draft (no markers, no QR, no shuffle) | manual input |
+| `src/mini_amc/examples/subject.example.typ` | Example subject written with the prelude (same questions as the YAML example, kept in sync by a test); `--bank subject.typ` reads its `bank` value back | manual input |
+| `src/mini_amc/examples/q/chapter.example.typ` | Example chapter: its questions live in their own file, joined by the subject with `+` | manual input |
+| `src/mini_amc/examples/code/fizzbuzz.example.py` | Example external file pulled into a statement with `read()` (the code shown on the copy is the real file) | manual input |
 | `src/mini_amc/examples/students.example.csv` | Nominative list (example), header `copy_id,name` | manual input |
 | `src/mini_amc/examples/students.moodle.example.csv` | Moodle-style export (example): `;`-separated, link column `Numéro étudiant` | Moodle/LMS export |
 | `data/copy_XXXX.json` | One copy: shuffled questions/choices, keys A/B/C… | `gen/generate.py` |
 | `data/copy_XXXX.pdf` | The printable copy (Typst template + `copy.json` + `qr-{page}.png`) | `gen/generate.py` via `typst compile` |
-| `data/build/XXXX/` | Typst build directory of one copy (`main.typ` + `copy.json` + `qr-N.png`) | `gen/generate.py` |
+| `data/build/XXXX/` | Typst build directory of one copy (`main.typ` + `bank.typ` + `copy.json` + `qr-N.png`); `bank.typ` is one `#import` for a Typst subject, or `template/bank-json.typ` reading `bank.json` for a YAML bank | `gen/generate.py` |
 | `data/positions.json` | Positions per copy (indexed by `copy_id`): `bubbles` (MCQ) + `gradeboxes` (open questions, with `value`), extracted via `typst eval` on `#metadata(...)` | `gen/generate.py` |
 | `data/answers.json` | Correct answers per copy (answer key) | `gen/generate.py` |
 | `data/students.json` | `copy_id` → student name (from `--students`, optional) | `gen/generate.py` |
