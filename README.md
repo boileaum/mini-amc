@@ -7,15 +7,15 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/boileaum/mini-amc/blob/main/LICENSE)
 [![Built with Mistral Vibe](https://img.shields.io/badge/built_with-Mistral_Vibe-FF7000?logo=mistralai)](https://mistral.ai/vibe)
 
-A mini-clone of Auto-Multiple-Choice (AMC) based on [Typst](https://typst.app). 100% local data (student scans never leave the machine), zero external Typst packages.
+A mini-clone of [Auto-Multiple-Choice](https://www.auto-multiple-choice.net) (AMC) based on [Typst](https://typst.app). 100% local data (student scans never leave the machine), zero external Typst packages.
 
 ## Features
 
-- **Everything is 100% local**: exam papers, student scans and grades never leave your machine — no cloud, no account, no upload
-- **Write the exam once** as a YAML question bank: MCQ (single-answer or multi-answer) + open questions you grade on the paper copy (blacken one lettered box in the gray grader area = a fraction of the max score)
+- **Everything is local**: exam papers, student scans and grades never leave your machine
+- **Write the exam once** as a YAML question bank: MCQ (single-answer or multi-answer) + open questions you grade on the paper copy (blacken one lettered box in the gray grader area)
 - **Print one personalized PDF copy per student** (questions and choices shuffled differently on each copy)
 - **Scan the returned copies**: answers are **read automatically (OMR)**, doubtful or ambiguous cases are flagged for review
-- **Review doubtful copies** in a local web UI and correct them there, with the annotated scan next to the detected answers (also overrides a misread grade box)
+- **Review doubtful copies** in a local web UI and correct them there, with the annotated scan next to the detected answers
 - **Export the grades as CSV** (per copy with the student name, and per question), ready to import into your gradebook — Moodle-export friendly
 
 ## Components
@@ -25,7 +25,7 @@ A mini-clone of Auto-Multiple-Choice (AMC) based on [Typst](https://typst.app). 
 | Copy generation | Python (seeded shuffle, QR PNGs) + Typst 0.15.1, zero external Typst packages |
 | OMR reading (Optical Mark Recognition) | OpenCV (`cv2.QRCodeDetector`) + NumPy, 100% local |
 | Review web UI | FastAPI + uvicorn |
-| Grading + CSV export | Python stdlib (`csv`) |
+| Grading + CSV export | Python stdlib |
 
 ## Pipeline
 
@@ -53,7 +53,3 @@ flowchart TD
 ```
 
 Full guide: [quickstart](https://boileaum.github.io/mini-amc/quickstart.html) · exam-day checklist: [runbook](https://boileaum.github.io/mini-amc/runbook.html) · API reference: [api](https://boileaum.github.io/mini-amc/api.html) · scope and technical decisions: `SCOPE.md` in the repo.
-
----
-
-Developed by vibe-coding with [Mistral Vibe](https://mistral.ai/vibe) (every commit carries the `Co-Authored-By: Mistral Vibe` trailer).
