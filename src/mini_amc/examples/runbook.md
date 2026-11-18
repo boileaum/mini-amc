@@ -8,7 +8,7 @@ Checklist for exam day. Steps 1-8 match the pipeline diagram (README) and the qu
 | 2 | Print | printer, no "fit to page" scaling | paper copies (corners + QR on every page) |
 | 3 | Exam | - | students check the bubbles on paper |
 | 4 | Manual grading (on paper) | blacken ONE lettered grade box per open question | grade boxes in the gray grader area |
-| 5 | Scan | scanner: 150-300 dpi, PNG/JPG, grayscale or color | `scans/` (one file per page) |
+| 5 | Scan | scanner: 150-300 dpi, PNG/JPG/PDF, grayscale or color | `scans/` (one page per sheet) |
 | 6 | OMR | `mini-amc omr` | `data/omr_results.json` + `data/annotated/` |
 | 7 | Review | `mini-amc web --reload` → http://127.0.0.1:8000/copies | `data/corrections.json` |
 | 8 | Grades | `mini-amc grades` | `data/notes.csv` + `data/notes_detail.csv` |
@@ -47,7 +47,7 @@ Checklist for exam day. Steps 1-8 match the pipeline diagram (README) and the qu
 
 ## Step 5: Scanning
 
-- [ ] one file per page into `scans/`: PNG/JPG, 150-300 dpi, grayscale or color (avoid 1-bit B/W if it degrades corners/QR), page preferably upright
+- [ ] scans into `scans/`: PNG/JPG (one file per page) or one PDF (one page per sheet), 150-300 dpi, grayscale or color (avoid 1-bit B/W if it degrades corners/QR), page preferably upright
 - [ ] the 4 black corners and the QR fully visible on every scan
 
 ## Step 6: OMR

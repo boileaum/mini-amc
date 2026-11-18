@@ -132,13 +132,18 @@ never silently misread.
 
 ## Step 5: Scan the copies
 
-Put the scans in `scans/`, one file per page:
+Put the scans in `scans/`: PNG or JPG, one file per page, or a **PDF** (one
+page per sheet, so a whole batch can be a single file):
 
-- **150-300 dpi**, PNG or JPG (avoid heavy JPEG compression on the QR code);
+- **150-300 dpi**, PNG, JPG or PDF (avoid heavy JPEG compression on the QR code);
 - **grayscale or color** both work (the OMR thresholds on darkness); avoid 1-bit black & white mode if it degrades the corner squares or the QR code;
 - page preferably upright (the OMR straightens it anyway via the 4 corner squares, but a near-upright scan is more reliable);
 - **the 4 black corner squares and the QR code (top right) must be fully visible** on every scan - a cropped corner or QR makes the page `unread`;
 - avoid shadows and glare over the bubbles; no "fit to page" rescaling beyond the printer's own output.
+
+A PDF page is rasterized at 300 dpi before reading (`--pdf-dpi` to change it);
+one PDF page is one sheet, and the results are keyed `batch.pdf#p3` so the pages
+of a single file never collide.
 
 ## Step 6: OMR reading
 

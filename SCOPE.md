@@ -37,8 +37,9 @@ The rollout backlog (nominative CSV link, grader-blackened free-text fields) is 
 - Typst CLI pinned to v0.15.1 (official binary); `src/mini_amc/template/typst.toml` contains `compiler = "0.15.1"`. The pin is an exact version on purpose (the template relies on 0.15 syntax, e.g. `top + left` compound alignments, and on `eval(s, mode: "markup")` semantics). To allow a different local binary, edit that `compiler` field in `src/mini_amc/template/typst.toml` - `typst compile` then warns/refuses on a version mismatch, which is the intended guard, not a bug.
 - Bank texts are Typst content, passed through untouched: no adapter, no ``eval(str, mode: "markup")``. The template build dir gets a generated ``bank.typ`` (one ``#import`` of the subject), so the rendering template only knows the ``bank`` value.
 - Typst 0.15 syntax: compound alignments are written `top + left` (not `top-left`).
-- Python stack pinned exactly in `pyproject.toml` (`==`) + committed `uv.lock`: opencv-python-headless==5.0.0.93, numpy==2.5.4, pillow==13.0.0, qrcode==8.2, fastapi==0.162.5, uvicorn==0.54.0.
+- Python stack pinned exactly in `pyproject.toml` (`==`) + committed `uv.lock`: opencv-python-headless==5.0.0.93, numpy==2.5.4, pillow==13.0.0, qrcode==8.2, pypdfium2==5.15.2, fastapi==0.162.5, uvicorn==0.54.0.
 - QR reading on the OMR side with `cv2.QRCodeDetector` (no pyzbar, no system dependency).
+- Scans accepted as PNG, JPG or PDF: scanners, photocopiers and phone scan apps output a whole batch as one multi-page PDF, so refusing it would push a conversion step onto the exam day. A PDF page is rasterized with `pypdfium2` (a wheel, no system dependency, 7.7 MB) at `--pdf-dpi` (300 by default); one PDF page = one sheet, the OMR result key carries the page (`batch.pdf#p3`) and the annotated image is `batch_p3.png`. A corrupt PDF is one `unread` page, never a crash that aborts the batch.
 - 100% local data: scans of answer sheets (student data) never go to the cloud.
 - Language: everything in English (code, docstrings, comments, docs, CLI messages, statuses, commit messages).
 - Docstrings required on the public API of `.py` files (Google convention, lint ruff `D` + `pydoclint`): they describe the "what" (contract: args, returns, errors). Minimal inline comments in `.py` and `.typ`: only when the "why" is not obvious (non-trivial decision, workaround). Design decisions go in `SCOPE.md` / `README.md`.
@@ -53,14 +54,15 @@ The rollout backlog (nominative CSV link, grader-blackened free-text fields) is 
 | `src/mini_amc/examples/code/fizzbuzz.example.py` | Example external file pulled into a statement with `read()` (the code shown on the copy is the real file) | manual input |
 | `src/mini_amc/examples/students.example.csv` | Nominative list (example), header `copy_id,name` | manual input |
 | `src/mini_amc/examples/students.moodle.example.csv` | Moodle-style export (example): `;`-separated, link column `Numéro étudiant` | Moodle/LMS export |
+| `scans/` | The scans to read: PNG/JPG (one file per page) or PDF (one page per sheet) | scanner |
 | `data/copy_XXXX.json` | One copy: shuffled questions/choices, keys A/B/C… | `gen/generate.py` |
 | `data/copy_XXXX.pdf` | The printable copy (Typst template + `copy.json` + `qr-{page}.png`) | `gen/generate.py` via `typst compile` |
 | `data/build/XXXX/` | Typst build directory of one copy (`main.typ` + `bank.typ` + `copy.json` + `qr-N.png`); `bank.typ` is the generated one-line `#import` of the subject | `gen/generate.py` |
 | `data/positions.json` | Positions per copy (indexed by `copy_id`): `bubbles` (MCQ) + `gradeboxes` (open questions, with `value`), extracted via `typst eval` on `#metadata(...)` | `gen/generate.py` |
 | `data/answers.json` | Correct answers per copy (answer key) | `gen/generate.py` |
 | `data/students.json` | `copy_id` → student name (from `--students`, optional) | `gen/generate.py` |
-| `data/omr_results.json` | OMR results: `scans` (per scan: status `ok` / `needs_review` / `unread`, copy_id, page, questions) + `copies` (multi-page aggregate per copy_id: status `ok` / `needs_review` / `partial` / `unread`, pages, questions with page) | `omr/read_scans.py` |
-| `data/annotated/` | Straightened and annotated scans (markers, QR, detected bubbles) | `omr/read_scans.py` |
+| `data/omr_results.json` | OMR results: `scans` (per scan page, keyed `name` for an image or `name.pdf#pN` for a PDF page: status `ok` / `needs_review` / `unread`, copy_id, page, file_page, questions) + `copies` (multi-page aggregate per copy_id: status `ok` / `needs_review` / `partial` / `unread`, pages, questions with page) | `omr/read_scans.py` |
+| `data/annotated/` | Straightened and annotated scans (markers, QR, detected bubbles); a PDF page becomes `name_pN.png` | `omr/read_scans.py` |
 | `data/corrections.json` | Manual corrections from the review UI: `{copy_id: {qid: [keys]}}` | `web/app.py` (D7) |
 | `data/notes.csv` | Grade per copy: `copy_id,student,status,score,score_max` (`student` empty without `--students`) | `mini-amc grades` (D8) |
 | `data/notes_detail.csv` | Question-by-question detail: `copy_id,qid,type,page,checked,correction,expected,point,needs_review` (`type` = `mcq`/`open`, `expected` = key or `open`) | `mini-amc grades` (D8) |

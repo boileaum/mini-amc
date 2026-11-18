@@ -253,6 +253,39 @@ def test_copy_scan(client):
     assert client.get("/copy/0002/scan/1").status_code == 404
 
 
+def test_copy_scan_pdf_page(tmp_path, monkeypatch):
+    from PIL import Image
+
+    data = tmp_path / "data"
+    data.mkdir()
+    (tmp_path / "scans").mkdir()
+    (data / "positions.json").write_text(
+        json.dumps({"0001": {"bubbles": [_bubble("q1", "A", 1)]}}), encoding="utf-8"
+    )
+    Image.new("RGB", (200, 300), "white").save(tmp_path / "scans" / "batch.pdf")
+    omr = {
+        "scans": {
+            "batch.pdf#p1": {
+                "scan": "batch.pdf",
+                "file_page": 1,
+                "status": "ok",
+                "copy_id": "0001",
+                "page": 1,
+                "questions": [],
+                "annotated": None,
+                "error": None,
+            }
+        },
+        "copies": {},
+    }
+    (data / "omr_results.json").write_text(json.dumps(omr), encoding="utf-8")
+    monkeypatch.setattr(web_app, "DATA", data)
+    r = TestClient(web_app.app).get("/copy/0001/scan/1")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/png"
+    assert r.content[:8] == b"\x89PNG\r\n\x1a\n"
+
+
 def test_empty_data(tmp_path, monkeypatch):
     monkeypatch.setattr(web_app, "DATA", tmp_path / "data")
     c = TestClient(web_app.app)

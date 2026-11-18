@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import qrcode
+from PIL import Image
 
 from mini_amc.omr.read_scans import (
     BUBBLE_DX_PT,
@@ -109,4 +110,13 @@ def _warp_photo(img, out_path, seed=1, margin=120, jitter=40):
         img, M, (w + margin, h + margin), borderValue=(200, 200, 200)
     )
     cv2.imwrite(str(out_path), photo)
+    return out_path
+
+
+def _save_pdf(images, out_path, resolution=300):
+    """Write BGR pages as a multi-page PDF (what a scanner or phone app emits)."""
+    pages = [Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)) for img in images]
+    pages[0].save(
+        out_path, save_all=True, append_images=pages[1:], resolution=resolution
+    )
     return out_path

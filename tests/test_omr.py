@@ -13,6 +13,7 @@ from synth import (
     _bubble_pos,
     _draw_bubble,
     _make_page,
+    _save_pdf,
     _warp_photo,
 )
 
@@ -377,3 +378,69 @@ def test_read_bubbles_multi_answer_squares():
     }
     q1 = read_bubbles(img1, pos1, 1)[0]
     assert q1["checked"] == ["A", "B"] and q1["needs_review"] is True
+
+
+def test_process_scan_pdf_page(tmp_path):
+    img, positions = _make_page("0042", 2, {"q1": "C", "q2": "B"})
+    pdf = _save_pdf([img], tmp_path / "batch.pdf")
+    result = process_scan(pdf, positions, tmp_path / "annotated")
+    assert result["status"] == "ok", result["error"]
+    assert result["scan"] == "batch.pdf"
+    assert result["file_page"] == 1
+    assert result["copy_id"] == "0042" and result["page"] == 2
+    assert {q["qid"]: q["checked"] for q in result["questions"]} == {
+        "q1": ["C"],
+        "q2": ["B"],
+    }
+    assert Path(result["annotated"]).name == "batch_p1.png"
+
+
+def test_main_multipage_pdf(tmp_path, monkeypatch):
+    from mini_amc.omr.read_scans import main
+
+    scans = tmp_path / "scans"
+    scans.mkdir()
+    img1, pos1 = _make_page("0011", 1, {"q1": "A", "q2": "B"})
+    img2, pos2 = _make_page("0012", 1, {"q1": "C", "q2": "A"})
+    _save_pdf([img1, img2], scans / "batch.pdf")
+    (tmp_path / "positions.json").write_text(
+        json.dumps({**pos1, **pos2}), encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "mini-amc-omr",
+            "--scans",
+            str(scans),
+            "--data",
+            str(tmp_path),
+            "--pdf-dpi",
+            "200",
+        ],
+    )
+    main()
+    results = json.loads((tmp_path / "omr_results.json").read_text())
+    assert set(results["scans"]) == {"batch.pdf#p1", "batch.pdf#p2"}
+    assert results["scans"]["batch.pdf#p1"]["copy_id"] == "0011"
+    assert results["scans"]["batch.pdf#p2"]["copy_id"] == "0012"
+    assert results["copies"]["0011"]["status"] == "ok"
+    assert results["copies"]["0012"]["status"] == "ok"
+    assert (tmp_path / "annotated" / "batch_p1.png").exists()
+    assert (tmp_path / "annotated" / "batch_p2.png").exists()
+
+
+def test_main_corrupt_pdf(tmp_path, monkeypatch):
+    from mini_amc.omr.read_scans import main
+
+    scans = tmp_path / "scans"
+    scans.mkdir()
+    (scans / "broken.pdf").write_text("not a pdf", encoding="utf-8")
+    (tmp_path / "positions.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        "sys.argv",
+        ["mini-amc-omr", "--scans", str(scans), "--data", str(tmp_path)],
+    )
+    main()
+    results = json.loads((tmp_path / "omr_results.json").read_text())
+    assert results["scans"]["broken.pdf#p1"]["status"] == "unread"
+    assert results["scans"]["broken.pdf#p1"]["error"]

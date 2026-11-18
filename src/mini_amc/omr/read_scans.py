@@ -7,6 +7,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import pypdfium2 as pdfium
 
 from mini_amc.gen.generate import CM_TO_PT, PAGE_H_CM, PAGE_W_CM
 
@@ -33,6 +34,11 @@ FILL_R_PT = 2.5
 THRESHOLD = 0.35
 GRAY_THRESHOLD = 0.15
 QR_RE = re.compile(r"copy:(\d+)\|page:(\d+)")
+# scanners, photocopiers and phone scan apps output a whole batch as one
+# multi-page PDF; PDF pages are rasterized at this resolution (the pipeline
+# rescales to SCALE anyway, this only sets the quality of the source pixels)
+PDF_DPI = 300
+SCAN_SUFFIXES = (".png", ".jpg", ".jpeg", ".pdf")
 
 
 def detect_markers(image: np.ndarray) -> np.ndarray:
@@ -364,27 +370,133 @@ def _draw_annotations(
         cv2.circle(warped, (cx, cy), int(BUBBLE_R_PT * s), color, 2)
 
 
+def _pdf_page_image(page, dpi: int) -> np.ndarray:
+    """Render one PDF page to the BGR image the rest of the pipeline expects."""
+    # pypdfium2 hands out BGR (or gray / BGRA depending on the page), while
+    # cv2 works on 3-channel BGR
+    arr = page.render(scale=dpi / 72).to_numpy()
+    if arr.ndim == 2:
+        return cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+    if arr.shape[2] == 4:
+        return cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)
+    return arr
+
+
+def scan_pages(
+    path: Path, pdf_dpi: int = PDF_DPI
+) -> list[tuple[int, np.ndarray | None]]:
+    """
+    Every page of a scan file, as a BGR image.
+
+    An image file holds one page; a PDF holds one page per sheet, rendered at
+    ``pdf_dpi``. A page that cannot be decoded yields ``None`` so the caller
+    records it as ``unread`` instead of dropping it silently.
+
+    Args:
+        path: Scan file (PNG, JPG or PDF).
+        pdf_dpi: Resolution used to rasterize PDF pages.
+
+    Returns:
+        List of ``(page_in_file, image)`` pairs, page numbers 1-based.
+    """
+    if path.suffix.lower() != ".pdf":
+        return [(1, cv2.imread(str(path)))]
+    try:
+        doc = pdfium.PdfDocument(str(path))
+    except Exception:
+        # a corrupt or password-protected PDF is one unreadable page, not a
+        # crash that aborts the whole batch
+        return [(1, None)]
+    try:
+        pages = []
+        for index in range(len(doc)):
+            try:
+                pages.append((index + 1, _pdf_page_image(doc[index], pdf_dpi)))
+            except Exception:
+                pages.append((index + 1, None))
+        return pages
+    finally:
+        doc.close()
+
+
+def load_scan_page(
+    path: Path, page_in_file: int = 1, pdf_dpi: int = PDF_DPI
+) -> np.ndarray | None:
+    """
+    One page of a scan file, as a BGR image (``None`` if unreadable).
+
+    Args:
+        path: Scan file (PNG, JPG or PDF).
+        page_in_file: Page number inside the file (1-based).
+        pdf_dpi: Resolution used to rasterize PDF pages.
+
+    Returns:
+        The page image, or ``None`` when it cannot be decoded.
+    """
+    for number, image in scan_pages(path, pdf_dpi):
+        if number == page_in_file:
+            return image
+    return None
+
+
+def render_scan_page(
+    path: Path, page_in_file: int = 1, pdf_dpi: int = PDF_DPI
+) -> bytes:
+    """
+    PNG bytes of one page of a scan file.
+
+    Used by the review UI to serve a page of a PDF scan as an image.
+
+    Args:
+        path: Scan file (PNG, JPG or PDF).
+        page_in_file: Page number inside the file (1-based).
+        pdf_dpi: Resolution used to rasterize PDF pages.
+
+    Returns:
+        The PNG-encoded page.
+
+    Raises:
+        ValueError: The page cannot be decoded or encoded.
+    """
+    image = load_scan_page(path, page_in_file, pdf_dpi)
+    if image is None:
+        raise ValueError(f"unreadable scan page: {path} page {page_in_file}")
+    ok, buffer = cv2.imencode(".png", image)
+    if not ok:
+        raise ValueError(f"cannot encode scan page: {path} page {page_in_file}")
+    return buffer.tobytes()
+
+
 def process_scan(
     path: Path,
     positions: dict,
     annotated_dir: Path | None = None,
     threshold: float = THRESHOLD,
     gray_threshold: float = GRAY_THRESHOLD,
+    *,
+    pdf_dpi: int = PDF_DPI,
+    file_page: int = 1,
+    image: np.ndarray | None = None,
 ) -> dict:
     """
-    Process one full scan: markers, straightening, QR, bubbles, annotation.
+    Process one full scan page: markers, straightening, QR, bubbles, annotation.
 
     Args:
-        path: Scan image file (PNG/JPG).
+        path: Scan file (PNG, JPG or PDF).
         positions: ``positions.json`` content (indexed by copy_id).
         annotated_dir: If set, output directory for the annotated image.
         threshold: Fill threshold for a checked bubble.
         gray_threshold: Fill threshold for detecting a gray trace.
+        pdf_dpi: Resolution used to rasterize a PDF page.
+        file_page: Page number inside the file (1-based; always 1 for an
+            image, the sheet number for a PDF).
+        image: Already decoded page image; decoded from ``path`` when omitted
+            (``main`` passes it to avoid rasterizing a PDF page twice).
 
     Returns:
-        Dict with ``scan``, ``status`` (``ok`` / ``needs_review`` /
-        ``unread``), ``copy_id``, ``page``, ``questions``, ``annotated``
-        and ``error`` (set if ``unread``).
+        Dict with ``scan``, ``file_page``, ``status`` (``ok`` /
+        ``needs_review`` / ``unread``), ``copy_id``, ``page``, ``questions``,
+        ``annotated`` and ``error`` (set if ``unread``).
 
     Raises:
         ValueError: Raised internally then converted to status ``unread``
@@ -392,6 +504,7 @@ def process_scan(
     """
     result = {
         "scan": path.name,
+        "file_page": file_page,
         "status": "unread",
         "copy_id": None,
         "page": None,
@@ -400,7 +513,8 @@ def process_scan(
         "error": None,
     }
     try:
-        image = cv2.imread(str(path))
+        if image is None:
+            image = load_scan_page(path, file_page, pdf_dpi)
         if image is None:
             raise ValueError("unreadable image")
         markers = detect_markers(image)
@@ -423,7 +537,14 @@ def process_scan(
         )
         if annotated_dir is not None:
             annotated_dir.mkdir(parents=True, exist_ok=True)
-            out = annotated_dir / path.name
+            # a PDF holds several pages: the file name alone would overwrite
+            # the annotation of the previous page
+            name = (
+                path.name
+                if path.suffix.lower() != ".pdf"
+                else f"{path.stem}_p{file_page}.png"
+            )
+            out = annotated_dir / name
             _draw_annotations(
                 warped, markers, copy_pos, qr["page"], result["questions"]
             )
@@ -485,7 +606,8 @@ def main(argv: list[str] | None = None) -> None:
     Subcommand ``mini-amc omr`` (via ``mini_amc.cli``).
 
     Conventional layout: reads the scans from ``--scans`` (default
-    ``./scans``) and the whole project state from ``--data`` (default
+    ``./scans``; PNG, JPG or PDF, one page per sheet, PDF pages rasterized at
+    ``--pdf-dpi``) and the whole project state from ``--data`` (default
     ``./data``): ``positions.json`` is read from there, results are written
     to ``omr_results.json`` as ``{"scans": …, "copies": …}`` and the
     annotated images go to ``annotated/`` - no per-file options, one common
@@ -498,6 +620,12 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--data", type=Path, default=Path("data"))
     ap.add_argument("--threshold", type=float, default=THRESHOLD)
     ap.add_argument("--gray-threshold", type=float, default=GRAY_THRESHOLD)
+    ap.add_argument(
+        "--pdf-dpi",
+        type=int,
+        default=PDF_DPI,
+        help="resolution used to rasterize PDF scans (default: 300)",
+    )
     args = ap.parse_args(argv)
 
     positions_path = args.data / "positions.json"
@@ -510,16 +638,27 @@ def main(argv: list[str] | None = None) -> None:
             f"positions file not found: {positions_path} (run mini-amc generate first)"
         )
     positions = json.loads(positions_path.read_text(encoding="utf-8"))
-    scans = (
-        sorted(args.scans.glob("*.png"))
-        + sorted(args.scans.glob("*.jpg"))
-        + sorted(args.scans.glob("*.jpeg"))
-    )
+    scans = sorted(p for p in args.scans.iterdir() if p.suffix.lower() in SCAN_SUFFIXES)
     results = {}
     for scan in scans:
-        results[scan.name] = process_scan(
-            scan, positions, annotated_dir, args.threshold, args.gray_threshold
-        )
+        for page_in_file, image in scan_pages(scan, args.pdf_dpi):
+            # one PDF can hold the whole batch: the file name alone would
+            # collide, so the key carries the page number
+            key = (
+                scan.name
+                if scan.suffix.lower() != ".pdf"
+                else f"{scan.name}#p{page_in_file}"
+            )
+            results[key] = process_scan(
+                scan,
+                positions,
+                annotated_dir,
+                args.threshold,
+                args.gray_threshold,
+                pdf_dpi=args.pdf_dpi,
+                file_page=page_in_file,
+                image=image,
+            )
     output = {"scans": results, "copies": aggregate_copies(results, positions)}
     args.data.mkdir(parents=True, exist_ok=True)
     out_path.write_text(

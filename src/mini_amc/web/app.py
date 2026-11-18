@@ -8,9 +8,10 @@ from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from mini_amc.grade.notes import load_bareme, question_point
+from mini_amc.omr.read_scans import render_scan_page
 
 app = FastAPI(title="mini-amc review")
 
@@ -259,7 +260,8 @@ def copy_scan(copy_id: str, page: int):
 
     Returns:
         The annotated image file (falls back to the raw scan if the
-        annotated image is missing).
+        annotated image is missing; a page of a PDF scan is rendered to
+        PNG).
 
     Raises:
         HTTPException: 404 if no readable scan exists for this copy/page.
@@ -278,8 +280,19 @@ def copy_scan(copy_id: str, page: int):
             path = Path(candidate)
             if not path.is_absolute():
                 path = DATA.parent / path
-            if path.exists():
+            if not path.exists():
+                continue
+            if path.suffix.lower() != ".pdf":
                 return FileResponse(path)
+            # a PDF scan holds several pages: serve the right one as an
+            # image, not the whole file
+            try:
+                return Response(
+                    content=render_scan_page(path, s.get("file_page", 1)),
+                    media_type="image/png",
+                )
+            except ValueError:
+                break
         break
     raise HTTPException(
         status_code=404, detail=f"no scan for copy {copy_id} page {page}"

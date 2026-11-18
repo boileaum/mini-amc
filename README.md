@@ -14,7 +14,7 @@ A mini-clone of [Auto-Multiple-Choice](https://www.auto-multiple-choice.net) (AM
 - **Everything is local**: exam papers, student scans and grades never leave your machine
 - **Write the exam once**, in Typst with the `amc.typ` prelude (math, code blocks, split over several files, external files pulled in with `read()`): MCQ (single-answer or multi-answer) + open questions you grade on the paper copy (blacken one lettered box in the gray grader area)
 - **Print one personalized PDF copy per student** (questions and choices shuffled differently on each copy)
-- **Scan the returned copies**: answers are **read automatically (OMR)**, doubtful or ambiguous cases are flagged for review
+- **Scan the returned copies** (images or one multi-page PDF): answers are **read automatically (OMR)**, doubtful or ambiguous cases are flagged for review
 - **Review doubtful copies** in a local web UI and correct them there, with the annotated scan next to the detected answers
 - **Export the grades as CSV** (per copy with the student name, and per question), ready to import into your gradebook - Moodle-export friendly
 
@@ -23,7 +23,7 @@ A mini-clone of [Auto-Multiple-Choice](https://www.auto-multiple-choice.net) (AM
 | Main component | Implementation |
 | --- | --- |
 | Copy generation | Python (seeded shuffle, QR PNGs) + Typst 0.15.1, zero external Typst packages |
-| OMR reading (Optical Mark Recognition) | OpenCV (`cv2.QRCodeDetector`) + NumPy, 100% local |
+| OMR reading (Optical Mark Recognition) | OpenCV (`cv2.QRCodeDetector`) + NumPy, PDF pages via pypdfium2, 100% local |
 | Review web UI | FastAPI + uvicorn |
 | Grading + CSV export | Python stdlib |
 
@@ -41,7 +41,7 @@ flowchart TD
   pdf --> print("<b>2</b> · Print"):::tool
   print --> exam(["<b>3</b> · EXAM<br/>students answer on paper"]):::exam
   exam --> manual(["<b>4</b> · Manual grading<br/>on paper (optional)"]):::exam
-  manual --> scan("<b>5</b> · Scan<br/>150-300 dpi, PNG/JPG<br/>corners + QR visible"):::tool
+  manual --> scan("<b>5</b> · Scan<br/>150-300 dpi, PNG/JPG/PDF<br/>corners + QR visible"):::tool
   scan --> scans["scans/"]:::data
   scans --> omr("<b>6</b> · mini-amc omr"):::tool
   omr --> res["data/omr_results.json + annotated/"]:::data
