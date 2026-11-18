@@ -88,7 +88,7 @@ Produces in `data/`:
 
 Generation is staged: on failure, `data/` is left untouched.
 
-Preview of the example copy (`bank.example.yml`, `students.example.csv`, copy `0001` « Alice Martin », seed 42 — corner squares, per-page QR code top right, student name in the header, MCQ bubbles, gray grader area with lettered grade boxes A/B/C for the open question):
+Preview of the example copy (`bank.example.yml`, `students.example.csv`, copy `0001` « Alice Martin », seed 42 — corner squares, per-page QR code top right, student name in the header, MCQ bubbles with a math formula in q3, gray grader area with lettered grade boxes A/B/C for the open question):
 
 ```{figure} _static/copy.example.png
 :alt: Example exam copy page generated from bank.example.yml with a fictitious student name

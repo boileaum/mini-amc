@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Example bank: q3 is now a math question (`What is $7 times 8$?` with `$54$`/`$56$`/`$63$` choices) so the documented example shows Typst math in the bank; the quickstart preview image `docs/source/_static/copy.example.png` was regenerated (copy 0001 « Alice Martin », seed 42 — the math question lands on page 1) and the figure caption updated.
 - Template: bank texts (question + choices) are parsed as Typst markup (`#eval(text, mode: "markup")`), so `$…$` math and fenced code blocks work in the YAML bank. Docs: quickstart §2 + SCOPE.md (incl. the `m c^2` vs `mc^2` math-syntax gotcha). Verified end-to-end via `mini-amc preview --bank` + `pdftotext`.
 - README pipeline: steps are numbered 1-8 (tools + human steps, not the data) and a "5 · Scan" node (150-300 dpi, PNG/JPG, corners + QR visible) was added between manual grading and `scans/`; scan advice detailed in quickstart §5. Docs: `custom.css` gets `overflow-x: auto` on `pre.mermaid` (d3-zoom pans instead of clipping), Furo `html_theme_options` add the GitHub + edit-page sidebar icons. SCOPE.md documents the exact Typst pin strategy (`compiler` field in `src/mini_amc/template/typst.toml`).
 

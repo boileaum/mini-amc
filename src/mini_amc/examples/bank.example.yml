@@ -13,20 +13,20 @@ questions:
       - text: "Marseille"
 
   - id: q2
-    text: "What is 7 × 8?"
-    choices:
-      - text: "54"
-      - text: "56"
-        correct: true
-      - text: "63"
-
-  - id: q3
     text: "What is the largest ocean in the world?"
     choices:
       - text: "Atlantic"
       - text: "Indian"
       - text: "Pacific"
         correct: true
+
+  - id: q3
+    text: "What is $7 times 8$?"
+    choices:
+      - text: "$54$"
+      - text: "$56$"
+        correct: true
+      - text: "$63$"
 
   - id: q4
     text: "In which year did the French Revolution take place?"
